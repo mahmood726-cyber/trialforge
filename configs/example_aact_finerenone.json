@@ -1,0 +1,13 @@
+{
+  "source": "aact",
+  "type": "pairwise",
+  "title": "Finerenone cardiorenal HR — auto-extracted from AACT",
+  "intervention": "Finerenone",
+  "comparator": "Placebo",
+  "outcome": "Primary cardiorenal composite (hazard ratio)",
+  "aact": {
+    "ncts": ["NCT02540993", "NCT02545049", "NCT04435626"],
+    "force_measure": "HR"
+  },
+  "advanced": ["egger", "loo", "cumulative"]
+}

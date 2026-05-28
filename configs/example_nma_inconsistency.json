@@ -1,0 +1,16 @@
+{
+  "type": "nma",
+  "measure": "OR",
+  "reference": "Placebo",
+  "smaller_better": true,
+  "title": "Network meta-analysis with Bucher inconsistency check",
+  "outcome": "Event (lower is better)",
+  "advanced": ["loops"],
+  "studies": [
+    { "name": "S1", "arms": [ {"t": "Placebo", "e": 120, "n": 500}, {"t": "DrugA", "e": 90, "n": 500} ] },
+    { "name": "S2", "arms": [ {"t": "Placebo", "e": 110, "n": 480}, {"t": "DrugB", "e": 70, "n": 470} ] },
+    { "name": "S3", "arms": [ {"t": "DrugA", "e": 85, "n": 460}, {"t": "DrugB", "e": 72, "n": 455} ] },
+    { "name": "S4", "arms": [ {"t": "Placebo", "e": 130, "n": 520}, {"t": "DrugC", "e": 60, "n": 510} ] },
+    { "name": "S5", "arms": [ {"t": "DrugA", "e": 88, "n": 500}, {"t": "DrugC", "e": 64, "n": 500} ] }
+  ]
+}

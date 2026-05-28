@@ -1,0 +1,19 @@
+# Built reports are regenerable
+output/*.html
+
+# Python
+__pycache__/
+*.pyc
+
+# Dev/scratch
+_*.py
+
+# AACT snapshots are large + external — never commit
+*.aact
+AACT/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
