@@ -91,6 +91,8 @@ Add a `"advanced": [...]` list to a `pairwise` config:
 | `evalue` | E-value: robustness of the pooled estimate to unmeasured confounding |
 | `gosh` | GOSH subset-heterogeneity diagnostic (median/IQR across all subsets) |
 | `pcurve` | p-curve evidential-value test (needs a `p_value` per study) |
+| `glmm` | rare-events binomial/hypergeometric-normal GLMM (no continuity correction) |
+| `grade` | GRADE certainty rating + Summary-of-Findings (add `baseline_risk`) |
 | `loo` | leave-one-out influence table |
 | `baujat` | top heterogeneity contributors |
 | `cumulative` | cumulative meta-analysis by `year` |

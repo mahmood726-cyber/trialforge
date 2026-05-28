@@ -45,6 +45,27 @@ def test_nma_inconsistency(tmp_path):
     assert "inconsistency" in h.lower()
 
 
+def test_rareevents(tmp_path):
+    h = _build("example_rareevents", tmp_path)
+    assert "GLMM" in h
+
+
+def test_multivariate(tmp_path):
+    h = _build("example_multivariate", tmp_path)
+    assert "borrow" in h.lower()
+
+
+def test_rmst(tmp_path):
+    h = _build("example_rmst", tmp_path)
+    assert "RMST" in h
+
+
+def test_grade_in_pairwise(tmp_path):
+    h = _build("example_pairwise_advanced", tmp_path)
+    assert "GRADE" in h
+    assert "certainty" in h.lower()
+
+
 if __name__ == "__main__":
     import tempfile, traceback
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

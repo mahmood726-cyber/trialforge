@@ -24,6 +24,12 @@ plus three advanced types ported from allmeta:
   * `cnma` — additive component NMA; each arm lists `components:[...]`
              (the reference arm has `components:[]`); output = per-component
              effects + combination prediction.
+  * `multivariate` — bivariate two-outcome borrowing of strength; studies
+             are `{name, y1, se1, y2, se2, rho_w}` (y2/se2 may be null where
+             an outcome is missing — that is where borrowing helps most).
+  * `rmst` — RMST / survival meta-analysis; studies supply `rmst_diff`+`se`
+             (or `ci_low`/`ci_high`), or KM step coords `km_t`/`km_c`+`se`
+             with a common `tau_star`. Differences are pooled, never ratios.
 See the per-type field reference in `configs/example_*.json`.
 
 ## Two ways to get the data
@@ -63,7 +69,10 @@ Also: `limitma` (Rucker limit meta-analysis small-study adjustment),
 `tsa` (trial sequential analysis; optional `tsa_delta` = effect to power
 for), `evalue` (E-value for unmeasured confounding; set
 `rare_outcome:false` for common outcomes), `gosh` (subset-heterogeneity
-diagnostic), `pcurve` (evidential value — needs a `p_value` on each study).
+diagnostic), `pcurve` (evidential value — needs a `p_value` on each study),
+`glmm` (rare-events binomial/hypergeometric-normal GLMM, no continuity
+correction; binary only), `grade` (GRADE certainty + Summary-of-Findings;
+add `baseline_risk`, optional `risk_of_bias`/`indirectness`).
 
 For `nma`:
 `loops` (Bucher closed-loop inconsistency — direct vs indirect) and

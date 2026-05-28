@@ -29,7 +29,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from trialforge import (pairwise, proportions, nma, doseresponse, report,  # noqa: E402
                         advanced, nodesplit, tfreport, copas, dta, cnma,
-                        limitma, tsa, evalue, pcurve, gosh, cinema)
+                        limitma, tsa, evalue, pcurve, gosh, cinema,
+                        glmm, multivariate, survival, grade)
 
 
 def die(msg):
@@ -122,6 +123,24 @@ def run_advanced(cfg, effects, measure, ratio):
         pv = [s.get("p_value") for s in cfg["studies"]]
         if all(p is not None for p in pv):
             adv["pcurve"] = pcurve.analyze(pv)
+    if "glmm" in want:
+        if all(all(kk in s for kk in ("tE", "tN", "cE", "cN")) for s in studies):
+            adv["glmm"] = glmm.analyze(studies)
+    if "grade" in want:
+        from trialforge import common as _c
+        pool = _c.pool_inverse_variance(yis, vis)
+        import math as _m
+        dsp = (lambda v: _m.exp(v)) if ratio else (lambda v: v)
+        n_total = sum((s.get("tN", 0) + s.get("cN", 0)) for s in studies) or None
+        eg = adv.get("egger", {}) or advanced.egger_test(yis, vis)
+        adv["grade"] = grade.rate(
+            measure=measure, estimate=dsp(pool.estimate),
+            ci_low=dsp(pool.ci_low), ci_high=dsp(pool.ci_high),
+            k=len(studies), n_total=n_total, i2=pool.i2,
+            baseline_risk=cfg.get("baseline_risk"),
+            egger_p=eg.get("p") if eg.get("available") else None,
+            risk_of_bias=cfg.get("risk_of_bias", "not assessed"),
+            indirectness=cfg.get("indirectness", "not assessed"))
     return adv
 
 
@@ -224,8 +243,28 @@ def main():
         html_doc = tfreport.render_cnma(cfg, res)
         summary = f"{len(res['components'])} components · {res['n_contrasts']} contrasts"
 
+    elif typ == "multivariate":
+        res = multivariate.analyze(cfg["studies"],
+                                   ratio=cfg.get("ratio", False))
+        if not res.get("available"):
+            die(f"multivariate failed: {res.get('reason','')}.")
+        html_doc = tfreport.render_multivariate(cfg, res)
+        o1 = res["outcome1"]
+        summary = (f"{res['k']} studies · outcome1 {o1['bivariate']:.3f}; "
+                   f"borrowed precision {o1['borrowed_precision_pct']:.0f}%")
+
+    elif typ == "rmst":
+        res = survival.analyze(cfg["studies"], tau=cfg.get("tau_star"),
+                               tau2_method=tau2_method)
+        if not res.get("available"):
+            die(f"RMST failed: {res.get('reason','')}.")
+        html_doc = tfreport.render_rmst(cfg, res)
+        summary = (f"{res['k']} studies · RMST difference {res['rmst_difference']:.2f} "
+                   f"(95% CI {res['ci_low']:.2f} to {res['ci_high']:.2f})")
+
     else:
-        die(f"unknown type '{typ}'. Use pairwise, proportion, nma, doseresponse, dta, cnma.")
+        die(f"unknown type '{typ}'. Use pairwise, proportion, nma, "
+            "doseresponse, dta, cnma, multivariate, rmst.")
 
     out.write_text(html_doc, encoding="utf-8")
     print(f"\nBuilt: {out}")

@@ -184,10 +184,36 @@ def advanced_section(adv: dict, *, ratio: bool, source_note: str = "") -> str:
         e = adv["mh"]
         re_rows.append(f"<tr><td>Mantel-Haenszel OR (fixed)</td>"
                        f"<td class='num'>{_n(e['OR'])} ({_n(e['ci_low'])}, {_n(e['ci_high'])})</td></tr>")
+    if "glmm" in adv and adv["glmm"].get("available"):
+        e = adv["glmm"]
+        re_rows.append(f"<tr><td>Binomial-normal GLMM (no continuity correction)</td>"
+                       f"<td class='num'>{_n(e['OR'])} ({_n(e['ci_low'])}, {_n(e['ci_high'])}); "
+                       f"&tau;&sup2;={_n(e['tau2'],3)}</td></tr>")
     if re_rows:
         blocks.append("<h3>Rare-event estimators</h3>"
                       "<table><thead><tr><th>Method</th><th class='num'>OR (95% CI)</th></tr></thead>"
                       f"<tbody>{''.join(re_rows)}</tbody></table>")
+
+    # --- GRADE certainty + SoF ---
+    if "grade" in adv and adv["grade"].get("available"):
+        G = adv["grade"]
+        drows = "\n".join(f"<tr><td>{_h(k.replace('_',' '))}</td><td>{_h(v)}</td></tr>"
+                          for k, v in G["domains"].items())
+        sof = ""
+        if G["absolute_effect"]:
+            ae = G["absolute_effect"]
+            sof = ("<p style='font-size:13px'><strong>Absolute effect</strong> "
+                   f"(per 1000): comparator {ae['comparator_per_1000']}, "
+                   f"intervention {ae['intervention_per_1000']} "
+                   f"(difference {ae['difference_per_1000']}, 95% CI "
+                   f"{ae['diff_ci_per_1000'][0]} to {ae['diff_ci_per_1000'][1]}).</p>")
+        blocks.append("<h3>GRADE certainty of evidence</h3>"
+                      f"<p class='headline'>Certainty: <strong>{_h(G['certainty']).upper()}</strong> "
+                      f"({G['n_studies']} studies, {_h(G['n_participants'])} participants; "
+                      f"starting design: {_h(G['design'])}).</p>"
+                      "<table><thead><tr><th>Domain</th><th>Rating</th></tr></thead>"
+                      f"<tbody>{drows}</tbody></table>{sof}"
+                      f"<p style='font-size:12px;color:#64748b'>{G['note']}</p>")
 
     # --- NMA inconsistency ---
     if "loops" in adv and adv["loops"]:
@@ -348,3 +374,80 @@ a combination's effect is the sum of its components (on the {'log ' if ratio els
     return _mf_report._shell(cfg.get("title", "Component network meta-analysis"),
                              "component NMA",
                              f"{len(res['components'])} components &middot; {res['measure']}", body)
+
+
+def render_multivariate(cfg, res):
+    """Standalone bivariate multi-outcome report."""
+    o1, o2 = res["outcome1"], res["outcome2"]
+    def block(name, o):
+        if o is None:
+            return ""
+        return (f"<tr><td>{_h(name)}</td>"
+                f"<td class='num'>{_n(o['bivariate'])} ({_n(o['ci_low'])}, {_n(o['ci_high'])})</td>"
+                f"<td class='num'>{_n(o['se_univariate'],4)}</td>"
+                f"<td class='num'>{_n(o['se_bivariate'],4)}</td>"
+                f"<td class='num'>{_n(o['borrowed_precision_pct'],1)}%</td></tr>")
+    n1 = cfg.get("outcome1_name", "Outcome 1")
+    n2 = cfg.get("outcome2_name", "Outcome 2")
+    ratio = cfg.get("ratio", False)
+    frows = [{"name": n1, "est": o1["bivariate"], "lo": o1["ci_low"],
+              "hi": o1["ci_high"], "weight": None}]
+    if o2 is not None:
+        frows.append({"name": n2, "est": o2["bivariate"], "lo": o2["ci_low"],
+                      "hi": o2["ci_high"], "weight": None})
+    forest = plots.forest_svg(
+        frows, {"est": 1.0 if ratio else 0.0, "lo": 1.0 if ratio else 0.0,
+                "hi": 1.0 if ratio else 0.0},
+        ratio=ratio, title="Pooled effect (95% CI)",
+        null_label_left="lower", null_label_right="higher")
+    body = f"""
+<section><h2>Bivariate result (borrowing of strength)</h2>
+<p class="headline">Jointly modelling two correlated outcomes
+(between-study correlation &rho; = {_n(res['rho_between'],2)}) lets each
+outcome borrow precision from the other. The "borrowed precision" column
+shows how much each outcome's standard error shrank versus a univariate
+analysis.</p>
+<div class="fig">{forest}</div>
+<table><thead><tr><th>Outcome</th><th class="num">Bivariate estimate (95% CI)</th>
+<th class="num">SE univariate</th><th class="num">SE bivariate</th>
+<th class="num">Precision gained</th></tr></thead>
+<tbody>{block(n1, o1)}{block(n2, o2)}</tbody></table>
+<p style="font-size:12px;color:#64748b">{res['note']} &tau;&#8321;={_n(res['tau1'],3)},
+&tau;&#8322;={_n(res['tau2'],3)}. {res['k_both']} of {res['k']} studies reported both outcomes.</p>
+</section>"""
+    return _mf_report._shell(cfg.get("title", "Multivariate (multi-outcome) meta-analysis"),
+                             "multivariate", f"2 outcomes &middot; &rho;={_n(res['rho_between'],2)}", body)
+
+
+def render_rmst(cfg, res):
+    """Standalone RMST / survival report."""
+    rows = "\n".join(
+        f"<tr><td>{_h(r['name'])}</td><td class='num'>{_n(r['diff'],2)} "
+        f"({_n(r['lo'],2)}, {_n(r['hi'],2)})</td><td class='num'>{_n(r['weight'],1)}%</td></tr>"
+        for r in res["per_study"])
+    rowsf = [{"name": r["name"], "est": r["diff"], "lo": r["lo"], "hi": r["hi"],
+              "weight": r["weight"]} for r in res["per_study"]]
+    forest = plots.forest_svg(
+        rowsf, {"est": res["rmst_difference"], "lo": res["ci_low"], "hi": res["ci_high"]},
+        ratio=False, title="RMST difference (95% CI)",
+        pi=(res["pi_low"], res["pi_high"]) if res["pi_low"] is not None else None,
+        null_label_left="favours comparator", null_label_right="favours intervention")
+    tau_txt = f"{res['tau_star']}" if res["tau_star"] is not None else "study-specified"
+    body = f"""
+<section><h2>Result</h2>
+<p class="headline">Pooled RMST difference (intervention &minus; comparator) over
+&tau;* = {tau_txt}: <strong>{_n(res['rmst_difference'],2)}</strong> time units
+(95% CI {_n(res['ci_low'],2)} to {_n(res['ci_high'],2)}) across {res['k']} studies.
+Heterogeneity I&sup2; {_n(res['i2'],1)}%.</p>
+<div class="kpis">
+<div class="kpi"><div class="v">{_n(res['rmst_difference'],2)}</div><div class="l">RMST difference</div></div>
+<div class="kpi"><div class="v">{res['k']}</div><div class="l">Studies</div></div>
+<div class="kpi"><div class="v">{_n(res['i2'],1)}%</div><div class="l">I&sup2;</div></div>
+</div></section>
+<section><h2>Forest plot</h2><div class="fig">{forest}</div></section>
+<section><h2>Per-study RMST differences</h2>
+<table><thead><tr><th>Study</th><th class="num">RMST diff (95% CI)</th><th class="num">Weight</th></tr></thead>
+<tbody>{rows}</tbody></table>
+<p style="font-size:12px;color:#64748b">{res['note']}</p></section>"""
+    return _mf_report._shell(cfg.get("title", "RMST / survival meta-analysis"),
+                             "RMST survival", f"&tau;* = {tau_txt}", body)

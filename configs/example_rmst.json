@@ -1,0 +1,11 @@
+{
+  "type": "rmst",
+  "title": "RMST (restricted mean survival time) meta-analysis",
+  "tau_star": 24,
+  "studies": [
+    { "name": "Trial A", "rmst_diff": 1.8, "se": 0.6 },
+    { "name": "Trial B", "rmst_diff": 2.4, "se": 0.8 },
+    { "name": "Trial C", "rmst_diff": 1.2, "se": 0.5 },
+    { "name": "Trial D", "rmst_diff": 3.0, "ci_low": 1.4, "ci_high": 4.6 }
+  ]
+}

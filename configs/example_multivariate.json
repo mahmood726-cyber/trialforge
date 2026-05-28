@@ -1,0 +1,15 @@
+{
+  "type": "multivariate",
+  "title": "Bivariate meta-analysis: two correlated outcomes (borrowing of strength)",
+  "outcome1_name": "Disease activity (MD)",
+  "outcome2_name": "Quality of life (MD)",
+  "ratio": false,
+  "studies": [
+    { "name": "S1", "y1": -1.2, "se1": 0.30, "y2": -0.9, "se2": 0.35, "rho_w": 0.6 },
+    { "name": "S2", "y1": -1.0, "se1": 0.28, "y2": -0.8, "se2": 0.33, "rho_w": 0.6 },
+    { "name": "S3", "y1": -1.5, "se1": 0.40, "y2": -1.1, "se2": 0.45, "rho_w": 0.6 },
+    { "name": "S4", "y1": -0.8, "se1": 0.25, "y2": null, "se2": null, "rho_w": 0.6 },
+    { "name": "S5", "y1": -1.3, "se1": 0.35, "y2": -1.0, "se2": 0.40, "rho_w": 0.6 },
+    { "name": "S6", "y1": -1.1, "se1": 0.30, "y2": null, "se2": null, "rho_w": 0.6 }
+  ]
+}

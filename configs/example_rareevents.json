@@ -1,0 +1,16 @@
+{
+  "type": "pairwise",
+  "measure": "OR",
+  "title": "Rare-event meta-analysis (GLMM + Peto + Mantel-Haenszel)",
+  "intervention": "New drug",
+  "comparator": "Placebo",
+  "outcome": "Rare serious adverse event",
+  "advanced": ["glmm", "peto", "mh"],
+  "studies": [
+    { "name": "Trial 1", "tE": 1, "tN": 1000, "cE": 5, "cN": 1000 },
+    { "name": "Trial 2", "tE": 0, "tN": 800,  "cE": 4, "cN": 820 },
+    { "name": "Trial 3", "tE": 2, "tN": 1200, "cE": 7, "cN": 1180 },
+    { "name": "Trial 4", "tE": 0, "tN": 600,  "cE": 3, "cN": 610 },
+    { "name": "Trial 5", "tE": 3, "tN": 1500, "cE": 9, "cN": 1490 }
+  ]
+}
