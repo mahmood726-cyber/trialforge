@@ -33,15 +33,13 @@ def _to_rr(estimate, measure, rare=True):
         return estimate
     if m == "OR":
         if rare:
-            return estimate
-        # common-outcome approximation (VanderWeele 2017)
-        return (1.0 if estimate == 1 else
-                estimate / (1 - 0 + 0) if False else
-                (math.sqrt(estimate)))  # sqrt(OR) approx for common outcomes
+            return estimate          # rare outcome: OR ~= RR
+        return math.sqrt(estimate)   # common-outcome sqrt(OR) approximation
     if m == "HR":
-        # VanderWeele 2017 HR->RR approximation (assumes outcome not too common)
-        return (1 - 0.5 ** math.sqrt(estimate)) / (1 - 0.5 ** math.sqrt(1.0 / estimate)) \
-            if estimate != 1 else 1.0
+        if rare or estimate == 1:
+            return estimate          # rare outcome: HR ~= RR
+        # common-outcome HR->RR (VanderWeele-Ding 2017):
+        return (1 - 0.5 ** math.sqrt(estimate)) / (1 - 0.5 ** math.sqrt(1.0 / estimate))
     return estimate
 
 

@@ -108,7 +108,6 @@ def run_advanced(cfg, effects, measure, ratio):
     if "tsa" in want:
         adv["tsa"] = tsa.analyze(yis, vis, delta=cfg.get("tsa_delta"), ratio=ratio)
     if "evalue" in want:
-        d = cfg.get("studies") and None
         # need the pooled display estimate + CI; compute a quick RE pool
         from trialforge import common as _c
         pool = _c.pool_inverse_variance(yis, vis)
@@ -172,6 +171,11 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     tau2_method = cfg.get("tau2_method", "PM")
 
+    # Every analysis type needs a studies array — fail closed with a clear
+    # message (not a raw traceback) for all types, not just pairwise.
+    if not cfg.get("studies") and not cfg.get("trials"):
+        die(f"'{typ}' needs a 'studies' array in the config.")
+
     if typ == "pairwise":
         measure = (cfg.get("measure") or "OR").upper()
         trials = cfg.get("studies") or cfg.get("trials")
@@ -182,8 +186,7 @@ def main():
             die("no usable studies.")
         base = report.render_pairwise(cfg, pool, measure)
         adv = run_advanced(cfg, effects, measure, pool.extra["ratio"])
-        adv_html = tfreport.advanced_section(adv, ratio=pool.extra["ratio"],
-                                             source_note=source_note)
+        adv_html = tfreport.advanced_section(adv, ratio=pool.extra["ratio"])
         html_doc = tfreport.splice(base, adv_html)
         summary = (f"{pool.k} studies · {measure} {pool.extra['display']['estimate']:.3f} "
                    f"· I2={pool.i2:.0f}% · advanced: {','.join(adv) or 'none'}")
@@ -212,7 +215,7 @@ def main():
             adv["cinema"] = cinema.rate(
                 res, loops=adv.get("loops"), ratio=res["ratio"],
                 judgments=cfg.get("cinema_judgments"))
-        adv_html = tfreport.advanced_section(adv, ratio=res["ratio"], source_note=source_note)
+        adv_html = tfreport.advanced_section(adv, ratio=res["ratio"])
         html_doc = tfreport.splice(base, adv_html)
         best = res["ranking"][0]
         summary = (f"{res['n_studies']} studies · {len(res['treatments'])} treatments · "
@@ -265,6 +268,16 @@ def main():
     else:
         die(f"unknown type '{typ}'. Use pairwise, proportion, nma, "
             "doseresponse, dta, cnma, multivariate, rmst.")
+
+    # Ensure the AACT "verify against source" caveat is in the rendered HTML
+    # for EVERY type (it previously only appeared when an advanced-diagnostics
+    # section happened to be present).
+    if source_note:
+        aact_section = (
+            '<section><div class="disclaimer">'
+            '<strong>AACT-assisted extraction.</strong> ' + source_note
+            + '</div></section>')
+        html_doc = tfreport.splice(html_doc, aact_section)
 
     out.write_text(html_doc, encoding="utf-8")
     print(f"\nBuilt: {out}")

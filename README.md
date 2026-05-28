@@ -15,9 +15,11 @@ proportions, network MA, dose-response) **plus**:
 - Three further advanced methods ported from the `allmeta` suite:
   **diagnostic test accuracy** (`dta` — bivariate Se/Sp pooling + SROC
   curve), **additive component NMA** (`cnma` — decompose multi-component
-  interventions), and the **Copas** selection model above. The DTA and
-  Copas engines are validated against the allmeta R-parity fixtures
-  (mada::reitsma, metasens::copas).
+  interventions), and the **Copas** selection model above. The DTA engine
+  is checked against the allmeta `mada::reitsma` fixture; for Copas and
+  limit-MA the **unadjusted FE/RE baselines** match the `metasens` fixtures
+  to 1e-6, while the bias-**adjusted** estimates are documented HT/WLS
+  approximations checked for direction (full MLE is not reproduced).
 
 Same low-token, offline-first design as the sibling kits: the engine is
 pre-built, a CLI only writes a small config, and `run.py` is deterministic

@@ -10,8 +10,10 @@ toward the null when events are rare, and handles zero cells natively.
 theta_i ~ N(theta, tau^2);  a_i | m1_i ~ NoncentralHypergeometric(psi=e^{theta_i})
 Maximise sum_i log integral over theta_i  w.r.t. (theta, tau^2).
 
-Matches metafor::rma.glmm(measure="OR", model="CM.AL", method="ML") to
-Hermite-quadrature precision.
+Implements the same conditional formulation as
+metafor::rma.glmm(measure="OR", model="CM.AL", method="ML"). (No R-parity
+fixture is bundled; the test checks agreement with the Peto OR on rare
+balanced data rather than an exact metafor reference.)
 """
 from __future__ import annotations
 import math
@@ -109,11 +111,15 @@ def analyze(studies):
             break
         theta, tau = new_theta, new_tau
 
-    # SE of theta via numerical 2nd derivative of the profile log-lik
-    h = 1e-3
-    ll0 = f(theta, tau)
-    llp = f(theta + h, tau)
-    llm = f(theta - h, tau)
+    # SE of theta from the curvature of the PROFILE log-likelihood: at each
+    # perturbed theta, tau is re-optimised (so the SE accounts for the
+    # theta-tau covariance and is not anti-conservative).
+    def profile(th):
+        return f(th, golden(lambda u: f(th, u), 0.0, 3.0, th, "tau"))
+    h = 1e-2
+    ll0 = profile(theta)
+    llp = profile(theta + h)
+    llm = profile(theta - h)
     curv = (llp - 2 * ll0 + llm) / (h * h)
     se = math.sqrt(-1.0 / curv) if curv < 0 else float("nan")
 
@@ -125,5 +131,6 @@ def analyze(studies):
         "ci_high": math.exp(theta + common.Z975 * se) if se == se else None,
         "tau2": tau * tau, "tau": tau,
         "note": "Conditional hypergeometric-normal GLMM (Stijnen 2010); "
-                "no continuity correction; matches metafor::rma.glmm CM.AL.",
+                "no continuity correction; same conditional formulation as "
+                "metafor::rma.glmm CM.AL (not exactly parity-tested).",
     }

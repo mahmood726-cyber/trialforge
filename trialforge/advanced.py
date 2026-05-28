@@ -112,8 +112,11 @@ def pet_peese(yis, vis):
     se_b0 = math.sqrt(sigma2 * cpet[0][0])
     df_pet = df
     t0 = bpet[0] / se_b0 if se_b0 else float("nan")
-    p0 = 2 * (1 - _t_cdf(abs(t0), df_pet))
-    pet_sig = p0 < 0.10  # PET corrected effect differs from zero
+    # One-sided PET test on the bias-corrected intercept (Stanley-Doucouliagos):
+    # if the corrected effect is significantly non-null (one-sided p<0.10),
+    # switch to PEESE; otherwise report PET.
+    p0 = 1 - _t_cdf(abs(t0), df_pet)
+    pet_sig = p0 < 0.10  # PET corrected effect differs from zero (one-sided)
     # PEESE: yi = b0 + b1*vi
     Xpeese = [[1.0, v] for v in vis]
     bpeese, cpeese = _wls(Xpeese, yis, w)
