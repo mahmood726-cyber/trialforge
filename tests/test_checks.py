@@ -107,6 +107,62 @@ def test_check_flag_passes_clean(tmp_path):
     assert r.returncode == 0
 
 
+def test_string_numeric_field_does_not_raise():
+    # checks.check() must never raise on sloppy JSON; a string where a number
+    # is expected becomes a bad_type error, not a TypeError.
+    cfg = {"type": "pairwise", "studies": [
+        {"name": "A", "tE": "thirty", "tN": 300, "cE": 40, "cN": 300},
+        {"name": "B", "tE": 25, "tN": 280, "cE": 35, "cN": 290},
+    ]}
+    issues, s = checks.check(cfg)  # would previously raise TypeError
+    assert "bad_type" in _codes(issues) and not s["ok"]
+
+
+def test_nonfinite_value_flagged():
+    cfg = {"type": "pairwise", "measure": "HR", "studies": [
+        {"name": "A", "effect": float("nan"), "ci_low": 0.6, "ci_high": 1.0},
+        {"name": "B", "effect": 0.8, "ci_low": 0.6, "ci_high": 1.0},
+    ]}
+    issues, s = checks.check(cfg)
+    assert "nonfinite_value" in _codes(issues)
+
+
+def test_boolean_is_rejected():
+    cfg = {"type": "pairwise", "studies": [
+        {"name": "A", "tE": True, "tN": 300, "cE": 40, "cN": 300},
+        {"name": "B", "tE": 25, "tN": 280, "cE": 35, "cN": 290},
+    ]}
+    issues, s = checks.check(cfg)
+    assert "bad_type" in _codes(issues)
+
+
+def test_proportion_rows_validated():
+    cfg = {"type": "proportion", "studies": [
+        {"name": "A", "e": 50, "n": 40},   # events > n
+        {"name": "B", "e": 10, "n": 100},
+    ]}
+    issues, s = checks.check(cfg)
+    assert "impossible_count" in _codes(issues) and not s["ok"]
+
+
+def test_dta_rows_validated():
+    cfg = {"type": "dta", "studies": [
+        {"name": "A", "tp": 80, "fp": 40, "fn": 20, "tn": 160},
+        {"name": "B", "tp": -1, "fp": 5, "fn": 3, "tn": 50},  # negative count
+    ]}
+    issues, s = checks.check(cfg)
+    assert "impossible_count" in _codes(issues)
+
+
+def test_rmst_nonpositive_se_flagged():
+    cfg = {"type": "rmst", "studies": [
+        {"name": "A", "rmst_diff": 1.2, "se": 0.0},   # se must be > 0
+        {"name": "B", "rmst_diff": 0.9, "se": 0.3},
+    ]}
+    issues, s = checks.check(cfg)
+    assert "nonpositive_se" in _codes(issues)
+
+
 def test_build_blocks_on_error(tmp_path):
     cfg = {"type": "pairwise", "studies": [
         {"name": "Bad", "tE": 95, "tN": 22, "cE": 3, "cN": 79},

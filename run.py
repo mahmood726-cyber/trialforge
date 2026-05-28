@@ -208,6 +208,15 @@ def main():
         adv = run_advanced(cfg, effects, measure, pool.extra["ratio"])
         adv_html = tfreport.advanced_section(adv, ratio=pool.extra["ratio"])
         html_doc = tfreport.splice(base, adv_html)
+        import math as _m
+        d = pool.extra["display"]
+        webr_html = tfreport.webr_section(
+            [e.yi for e in effects], [_m.sqrt(e.vi) for e in effects],
+            ratio=pool.extra["ratio"], method=tau2_method, knha=True,
+            measure=measure, tf_estimate=d["estimate"], tf_ci_low=d["ci_low"],
+            tf_ci_high=d["ci_high"], tf_pi_low=d["pi_low"], tf_pi_high=d["pi_high"],
+            tf_i2=pool.i2, floor_applied=pool.hksj_floor_applied)
+        html_doc = tfreport.splice(html_doc, webr_html)
         summary = (f"{pool.k} studies · {measure} {pool.extra['display']['estimate']:.3f} "
                    f"· I2={pool.i2:.0f}% · advanced: {','.join(adv) or 'none'}")
 

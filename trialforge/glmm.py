@@ -90,7 +90,7 @@ def analyze(studies):
 
     theta, tau = 0.0, 0.1
 
-    def golden(g, a, b, fixed, which):
+    def golden(g, a, b):
         gr = (math.sqrt(5) - 1) / 2
         c = b - gr * (b - a); d = a + gr * (b - a)
         fc = g(c) ; fd = g(d)
@@ -104,8 +104,8 @@ def analyze(studies):
         return 0.5 * (a + b)
 
     for _ in range(40):
-        new_theta = golden(lambda t: f(t, tau), -5.0, 5.0, tau, "theta")
-        new_tau = golden(lambda u: f(new_theta, u), 0.0, 3.0, new_theta, "tau")
+        new_theta = golden(lambda t: f(t, tau), -5.0, 5.0)
+        new_tau = golden(lambda u: f(new_theta, u), 0.0, 3.0)
         if abs(new_theta - theta) < 1e-6 and abs(new_tau - tau) < 1e-6:
             theta, tau = new_theta, new_tau
             break
@@ -115,7 +115,7 @@ def analyze(studies):
     # perturbed theta, tau is re-optimised (so the SE accounts for the
     # theta-tau covariance and is not anti-conservative).
     def profile(th):
-        return f(th, golden(lambda u: f(th, u), 0.0, 3.0, th, "tau"))
+        return f(th, golden(lambda u: f(th, u), 0.0, 3.0))
     h = 1e-2
     ll0 = profile(theta)
     llp = profile(theta + h)

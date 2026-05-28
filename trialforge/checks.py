@@ -29,8 +29,29 @@ def _info(code, msg):
     return {"level": "info", "code": code, "msg": msg}
 
 
+def _num(name, field, val, out):
+    """Coerce a field to float; emit a bad_type error and return None on failure.
+    Keeps check() to its 'does not raise' contract for sloppy JSON."""
+    if val is None:
+        return None
+    if isinstance(val, bool):  # bool is an int subclass — reject explicitly
+        out.append(_err("bad_type", f"{name}: '{field}' is a boolean, expected a number."))
+        return None
+    if isinstance(val, (int, float)):
+        import math as _m
+        if not _m.isfinite(val):
+            out.append(_err("nonfinite_value", f"{name}: '{field}' is not finite ({val})."))
+            return None
+        return float(val)
+    out.append(_err("bad_type", f"{name}: '{field}'={val!r} is not a number."))
+    return None
+
+
 def _check_binary_row(name, t, out):
-    tE, tN, cE, cN = t.get("tE"), t.get("tN"), t.get("cE"), t.get("cN")
+    if not all(k in t for k in ("tE", "tN", "cE", "cN")):
+        return
+    tE = _num(name, "tE", t["tE"], out); tN = _num(name, "tN", t["tN"], out)
+    cE = _num(name, "cE", t["cE"], out); cN = _num(name, "cN", t["cN"], out)
     if None in (tE, tN, cE, cN):
         return
     for lbl, e, n in (("intervention", tE, tN), ("comparator", cE, cN)):
@@ -48,7 +69,11 @@ def _check_binary_row(name, t, out):
 
 
 def _check_precomputed_row(name, t, ratio, out):
-    eff, lo, hi = t.get("effect"), t.get("ci_low"), t.get("ci_high")
+    if not all(k in t for k in ("effect", "ci_low", "ci_high")):
+        return
+    eff = _num(name, "effect", t["effect"], out)
+    lo = _num(name, "ci_low", t["ci_low"], out)
+    hi = _num(name, "ci_high", t["ci_high"], out)
     if None in (eff, lo, hi):
         return
     if lo > hi:
@@ -61,6 +86,35 @@ def _check_precomputed_row(name, t, ratio, out):
         out.append(_err("nonpositive_ratio",
                         f"{name}: ratio-scale value <= 0 (effect/CI must be >0 "
                         "for OR/RR/HR)."))
+
+
+def _check_proportion_row(name, t, out):
+    e = _num(name, "e", t.get("e"), out)
+    n = _num(name, "n", t.get("n"), out)
+    if None in (e, n):
+        return
+    if n <= 0:
+        out.append(_err("zero_n", f"{name}: n={n} (must be >0)."))
+    elif e < 0 or e > n:
+        out.append(_err("impossible_count",
+                        f"{name}: events {e} outside [0, {n}]."))
+
+
+def _check_dta_row(name, t, out):
+    vals = {k: _num(name, k, t.get(k), out) for k in ("tp", "fp", "fn", "tn")}
+    for k, v in vals.items():
+        if v is not None and v < 0:
+            out.append(_err("impossible_count", f"{name}: {k}={v} is negative."))
+    if all(v is not None for v in vals.values()):
+        if vals["tp"] + vals["fn"] == 0 or vals["fp"] + vals["tn"] == 0:
+            out.append(_err("empty_margin",
+                            f"{name}: a diseased/non-diseased margin is zero."))
+
+
+def _check_se_field(name, t, key, out):
+    se = _num(name, key, t.get(key), out)
+    if se is not None and se <= 0:
+        out.append(_err("nonpositive_se", f"{name}: {key}={se} must be > 0."))
 
 
 def check(cfg):
@@ -88,20 +142,38 @@ def check(cfg):
         if n > 1:
             out.append(_warn("duplicate_name", f"study name '{name}' appears {n} times."))
 
-    # per-row data checks (pairwise-like)
-    if typ in ("pairwise", "doseresponse", "cnma", "nma"):
-        for i, s in enumerate(studies):
-            name = s.get("name") or s.get("nct") or f"(study {i+1})"
-            if typ in ("nma", "cnma"):
-                for arm in s.get("arms", []):
-                    if all(k in arm for k in ("e", "n")):
-                        if arm["n"] <= 0 or arm["e"] < 0 or arm["e"] > arm["n"]:
-                            out.append(_err("impossible_count",
-                                            f"{name}: arm {arm.get('t','?')} has "
-                                            f"events {arm['e']} / N {arm['n']} out of range."))
-            else:
-                _check_binary_row(name, s, out)
-                _check_precomputed_row(name, s, ratio, out)
+    # per-row data checks, dispatched by analysis type
+    for i, s in enumerate(studies):
+        name = s.get("name") or s.get("nct") or f"(study {i+1})"
+        if typ in ("nma", "cnma"):
+            for arm in s.get("arms", []):
+                if all(k in arm for k in ("e", "n")):
+                    e = _num(name, "e", arm["e"], out)
+                    n = _num(name, "n", arm["n"], out)
+                    if None not in (e, n) and (n <= 0 or e < 0 or e > n):
+                        out.append(_err("impossible_count",
+                                        f"{name}: arm {arm.get('t','?')} has "
+                                        f"events {e} / N {n} out of range."))
+        elif typ == "proportion":
+            _check_proportion_row(name, s, out)
+        elif typ == "dta":
+            _check_dta_row(name, s, out)
+        elif typ == "multivariate":
+            for key in ("se1", "se2", "se"):
+                if key in s:
+                    _check_se_field(name, s, key, out)
+            for key in ("y1", "y2", "y", "r"):
+                if key in s:
+                    _num(name, key, s[key], out)
+        elif typ in ("rmst", "survival"):
+            for key in ("rmst_diff", "ci_low", "ci_high"):
+                if key in s:
+                    _num(name, key, s[key], out)
+            if "se" in s and s["se"] is not None:
+                _check_se_field(name, s, "se", out)
+        else:  # pairwise, doseresponse, and anything precomputed
+            _check_binary_row(name, s, out)
+            _check_precomputed_row(name, s, ratio, out)
 
     # k-based methodological warnings
     k = len(studies)

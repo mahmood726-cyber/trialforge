@@ -5,8 +5,10 @@ output/*.html
 __pycache__/
 *.pyc
 
-# Dev/scratch
+# Dev/scratch (single-underscore prototypes like _dbg_mv.py) — but never the
+# package marker __init__.py, which the bare _*.py glob also matches.
 _*.py
+!**/__init__.py
 
 # AACT snapshots are large + external — never commit
 *.aact

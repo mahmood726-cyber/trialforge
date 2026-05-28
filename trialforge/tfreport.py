@@ -3,6 +3,7 @@ splice it into a metaforge base report; plus standalone DTA and
 component-NMA reports."""
 from __future__ import annotations
 import math
+import json as _json
 from . import plots, report as _mf_report
 
 
@@ -284,6 +285,126 @@ def advanced_section(adv: dict, *, ratio: bool, source_note: str = "") -> str:
     sn = f"<p style='font-size:12px;color:#64748b'>{source_note}</p>" if source_note else ""
     return ('<section><h2>Advanced diagnostics</h2>' + sn + "".join(blocks) +
             "</section>")
+
+
+# --------------------------------------------------------------------------
+# WebR (in-browser R + metafor) cross-validation panel.
+# Like the E156 living capsule, the report can verify its own pooled estimate
+# by running metafor::rma() against the SAME yi/sei in the reader's browser.
+# Plain (non-f-string) JS + a JSON data tag avoids brace / </script> escaping
+# pitfalls (see rules/lessons.md).
+# --------------------------------------------------------------------------
+_WEBR_JS = r"""
+(function(){
+  var el = document.getElementById('tf-webr-data');
+  if(!el) return;
+  var D = JSON.parse(el.textContent);
+  var btn = document.getElementById('tf-webr-btn');
+  var out = document.getElementById('tf-webr-out');
+  function fmt(x,n){ if(x===null||x===undefined||isNaN(x)) return '—';
+    return Number(x).toFixed(n===undefined?4:n); }
+  btn.addEventListener('click', async function(){
+    btn.disabled = true;
+    out.textContent = 'Loading R + metafor in your browser (first run ~20–40s)…';
+    try{
+      var mod = await import('https://webr.r-wasm.org/latest/webr.mjs');
+      var webR = new mod.WebR();
+      await webR.init();
+      out.textContent = 'Installing metafor…';
+      await webR.installPackages(['metafor']);
+      out.textContent = 'Running rma()…';
+      var knha = D.knha ? ',test="knha"' : '';
+      var transf = D.ratio ? 'transf=exp,' : '';
+      var code = 'suppressMessages(library(metafor)); yi<-c('+D.yi.join(',')+
+        '); sei<-c('+D.sei.join(',')+'); res<-rma(yi=yi,sei=sei,method="'+D.method+
+        '"'+knha+'); pr<-predict(res,'+transf+'pi=TRUE); '+
+        'c(pr$pred,pr$ci.lb,pr$ci.ub,pr$pi.lb,pr$pi.ub,res$I2)';
+      var r = await webR.evalR(code);
+      var js = await r.toJs();
+      try{ webR.destroy(r); }catch(e){}
+      var v = js.values || [];
+      var pred=v[0], clb=v[1], cub=v[2], plb=v[3], pub=v[4], i2=v[5];
+      var tf = D.tf;
+      var d = Math.abs(pred - tf.estimate);
+      var ok = d < 1e-3;
+      var lab = D.measure + ', ' + D.method + (D.knha ? ', Knapp–Hartung' : '');
+      out.innerHTML =
+        '<div><b>R metafor ('+lab+'):</b> '+fmt(pred)+' ('+fmt(clb)+'–'+fmt(cub)+'), '+
+        'PI '+fmt(plb)+'–'+fmt(pub)+', I²='+fmt(i2,0)+'%</div>'+
+        '<div><b>trialforge:</b> '+fmt(tf.estimate)+' ('+fmt(tf.ci_low)+'–'+fmt(tf.ci_high)+'), '+
+        'PI '+fmt(tf.pi_low)+'–'+fmt(tf.pi_high)+', I²='+fmt(tf.i2,0)+'%</div>'+
+        '<div style="margin-top:6px">Δ pooled point estimate = <b>'+d.toExponential(1)+'</b> '+
+        (ok ? '<span style="color:#16a34a;font-weight:700">✓ agreement</span>'
+            : '<span style="color:#b45309;font-weight:700">differs — investigate</span>')+'</div>'+
+        (D.floor ? '<div style="font-size:12px;color:#64748b;margin-top:4px">The 95% CIs '+
+          'differ by design here: trialforge floors the Knapp–Hartung variance scale at 1 '+
+          'under under-dispersion (Q&lt;k−1), which metafor does not. The pooled point '+
+          'estimate is the scale-invariant cross-check.</div>' : '');
+    }catch(e){
+      out.innerHTML = '<span style="color:#b45309">WebR could not run here — it needs '+
+        'network access and an https:// origin (a local file:// page is often blocked by the '+
+        'browser, and the metafor WebAssembly build must be reachable): '+
+        String((e&&e.message)||e)+'.</span> The offline trialforge result and the copyable '+
+        'R script above remain valid.';
+    }finally{ btn.disabled = false; }
+  });
+})();
+"""
+
+
+def webr_section(yi, sei, *, ratio, method, knha, measure,
+                 tf_estimate, tf_ci_low, tf_ci_high,
+                 tf_pi_low, tf_pi_high, tf_i2, floor_applied=False) -> str:
+    """A 'Verify in R (WebR)' section: a copyable metafor script + a button
+    that runs rma() on the SAME yi/sei in-browser and diffs R's pooled
+    estimate against trialforge's. Degrades gracefully offline."""
+    if not yi or len(yi) < 2:
+        return ""
+    data = {
+        "yi": [round(float(v), 8) for v in yi],
+        "sei": [round(float(s), 8) for s in sei],
+        "ratio": bool(ratio), "method": method, "knha": bool(knha),
+        "measure": measure, "floor": bool(floor_applied),
+        "tf": {"estimate": tf_estimate, "ci_low": tf_ci_low, "ci_high": tf_ci_high,
+               "pi_low": tf_pi_low, "pi_high": tf_pi_high, "i2": tf_i2},
+    }
+    data_json = _json.dumps(data).replace("<", "\\u003c")
+    yi_str = ", ".join(f"{float(v):.6f}" for v in yi)
+    sei_str = ", ".join(f"{float(s):.6f}" for s in sei)
+    knha_arg = ', test="knha"' if knha else ""
+    transf = "transf=exp, " if ratio else ""
+    scale_note = " (back-transformed)" if ratio else ""
+    rcode = (
+        "library(metafor)\n"
+        f"yi  <- c({yi_str})\n"
+        f"sei <- c({sei_str})\n"
+        f'res <- rma(yi = yi, sei = sei, method = "{method}"{knha_arg})\n'
+        f"predict(res, {transf}pi = TRUE)  # pooled {measure}{scale_note}, 95% CI, 95% PI"
+    )
+    return (
+        '<section><h2>Verify in R (WebR)</h2>'
+        '<p style="font-size:13px;color:#334155">This report can check its own '
+        'arithmetic. The script below pools the <em>same</em> per-study effects '
+        '(<code>yi</code>) and standard errors (<code>sei</code>) with '
+        '<code>metafor::rma()</code>. Run it in any R session, or press the button '
+        'to run it right here in your browser via '
+        '<a href="https://docs.r-wasm.org/webr/latest/" rel="noopener">WebR</a> '
+        '(R + metafor compiled to WebAssembly) and compare against trialforge’s '
+        'pooled estimate.</p>'
+        f'<pre style="background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;'
+        f'overflow-x:auto;font-size:12.5px;line-height:1.5">{_h(rcode)}</pre>'
+        '<p style="margin:10px 0"><button id="tf-webr-btn" type="button" '
+        'style="background:#2563eb;color:#fff;border:0;border-radius:7px;'
+        'padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer">'
+        '▶ Run metafor in this browser</button></p>'
+        '<div id="tf-webr-out" style="font-size:13.5px;line-height:1.6;'
+        'background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;'
+        'min-height:1.6em;color:#334155">Press the button to load R + metafor and '
+        'cross-validate the pooled estimate (needs network + an https:// origin).</div>'
+        '<script type="application/json" id="tf-webr-data">' + data_json + '</script>'
+        '<script>' + _WEBR_JS + '</script>'
+        '</section>'
+    )
 
 
 def splice(base_html: str, advanced_html: str) -> str:

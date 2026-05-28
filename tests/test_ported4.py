@@ -84,6 +84,18 @@ def test_rmst_pool():
     assert r["ci_low"] < r["rmst_difference"] < r["ci_high"]
 
 
+def test_rmst_handles_null_se():
+    # A study with an explicit se:None (and no CI) must be skipped, not crash.
+    studies = [
+        {"name": "A", "rmst_diff": 1.8, "se": None},
+        {"name": "B", "rmst_diff": 2.4, "se": 0.8},
+        {"name": "C", "rmst_diff": 1.2, "se": 0.5},
+    ]
+    r = survival.analyze(studies, tau=24)  # would previously raise TypeError
+    assert r["available"] and r["k"] == 2
+    assert "A" in r["skipped"]
+
+
 # ---- GRADE ----
 def test_grade_high_when_clean():
     r = grade.rate(measure="RR", estimate=0.75, ci_low=0.65, ci_high=0.86,

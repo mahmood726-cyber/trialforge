@@ -66,6 +66,32 @@ def test_grade_in_pairwise(tmp_path):
     assert "certainty" in h.lower()
 
 
+def test_webr_panel_in_pairwise(tmp_path):
+    # The report must be capsule-like: it carries an in-browser WebR/metafor
+    # cross-validation panel that re-pools the SAME yi/sei.
+    h = _build("example_sglt2_hf", tmp_path)
+    assert "Verify in R (WebR)" in h
+    assert 'id="tf-webr-data"' in h
+    assert 'id="tf-webr-btn"' in h
+    assert "webr.r-wasm.org/latest/webr.mjs" in h
+    assert "metafor" in h
+    # the embedded JSON must carry trialforge's own pooled estimate to diff against
+    import re, json
+    m = re.search(r'<script type="application/json" id="tf-webr-data">(.*?)</script>',
+                  h, re.S)
+    assert m, "WebR data tag missing"
+    d = json.loads(m.group(1).replace("\\u003c", "<"))
+    assert d["measure"] == "HR" and d["method"] == "PM" and d["ratio"] is True
+    assert len(d["yi"]) == len(d["sei"]) == 5
+    assert abs(d["tf"]["estimate"] - 0.771) < 0.01
+
+
+def test_webr_only_for_pairwise(tmp_path):
+    # DTA/RMST reports are not pairwise pools — no WebR panel there.
+    h = _build("example_rmst", tmp_path)
+    assert "tf-webr-data" not in h
+
+
 if __name__ == "__main__":
     import tempfile, traceback
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]

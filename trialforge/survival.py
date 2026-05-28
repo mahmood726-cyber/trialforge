@@ -40,25 +40,35 @@ def rmst_from_km(points, tau):
 
 def analyze(studies, tau=None, tau2_method="PM"):
     """Pool RMST differences. Returns pooled difference (time units) + CI/PI."""
+    def _se(s):
+        v = s.get("se")
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return float(v)
+        lo, hi = s.get("ci_low"), s.get("ci_high")
+        if all(isinstance(x, (int, float)) and not isinstance(x, bool)
+               for x in (lo, hi)):
+            return (hi - lo) / (2 * common.Z975)
+        return None
+
     yis, vis, rows = [], [], []
     skipped = []
     for i, s in enumerate(studies):
         name = s.get("name", f"Study {i+1}")
-        if "rmst_diff" in s and ("se" in s or ("ci_low" in s and "ci_high" in s)):
+        if "rmst_diff" in s:
             diff = s["rmst_diff"]
-            if "se" in s:
-                se = s["se"]
-            else:
-                se = (s["ci_high"] - s["ci_low"]) / (2 * common.Z975)
-        elif "km_t" in s and "km_c" in s and tau is not None and "se" in s:
+            se = _se(s)
+        elif "km_t" in s and "km_c" in s and tau is not None:
             r_t = rmst_from_km(s["km_t"], tau)
             r_c = rmst_from_km(s["km_c"], tau)
             diff = r_t - r_c
-            se = s["se"]
+            se = _se(s)
         else:
             skipped.append(name)
             continue
-        if se <= 0:
+        if not isinstance(diff, (int, float)) or isinstance(diff, bool):
+            skipped.append(name)
+            continue
+        if se is None or se <= 0:
             skipped.append(name)
             continue
         yis.append(diff); vis.append(se * se)

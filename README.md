@@ -152,6 +152,25 @@ the same Paule-Mandel + Knapp-Hartung methodology, and
 match the capsule's own engine to 1e-4 / machine precision — a real
 cross-engine validation, not just a synthetic fixture.
 
+## Verify in R, in your browser (WebR)
+
+Every **pairwise** report is now capsule-like: it carries a **"Verify in R
+(WebR)"** panel that can check its own arithmetic. The panel shows a copyable
+`metafor::rma()` script built from the *same* per-study effects (`yi`) and
+standard errors (`sei`) the engine pooled, and a button that runs it **in your
+browser** — R + `metafor` compiled to WebAssembly via
+[WebR](https://docs.r-wasm.org/webr/latest/) — then diffs R's pooled estimate
+against trialforge's, like the E156 living capsules do.
+
+- The **pooled point estimate** is the scale-invariant cross-check (Δ shown,
+  agreement when < 1e-3). It is identical whether or not Knapp–Hartung is used.
+- The **95% CIs** can differ by design when trialforge's Knapp–Hartung variance
+  scale hits its floor of 1 under under-dispersion (`Q < k−1`), which `metafor`
+  does not floor — the panel says so.
+- It needs **network access and an https:// origin**; a local `file://` page is
+  often blocked by the browser. When WebR can't run, the offline trialforge
+  result and the copyable R script remain valid (the panel degrades gracefully).
+
 ## Methods
 
 All pooling uses the metaforge core (random effects, Paule–Mandel τ²,
