@@ -59,6 +59,10 @@ For `pairwise`:
 study's `subgroup`), `metareg` (uses each study's numeric `moderator`),
 `peto` / `mh` (binary rare-events). `copas` profiles the pooled estimate
 under increasing assumed publication bias (selection-model sensitivity).
+Also: `limitma` (Rucker limit meta-analysis small-study adjustment),
+`tsa` (trial sequential analysis; optional `tsa_delta` = effect to power
+for), `evalue` (E-value for unmeasured confounding; set
+`rare_outcome:false` for common outcomes).
 
 For `nma`:
 `loops` (Bucher closed-loop inconsistency — direct vs indirect).

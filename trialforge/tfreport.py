@@ -75,6 +75,45 @@ def advanced_section(adv: dict, *, ratio: bool, source_note: str = "") -> str:
                       f"{_n(c['re_estimate'])}; worst-case (50% unpublished) "
                       f"{_n(c['worst_case']['estimate'])}. {c['note']}</p>")
 
+    # --- limit meta-analysis ---
+    if "limitma" in adv and adv["limitma"].get("available"):
+        L = adv["limitma"]
+        blocks.append("<h3>Limit meta-analysis (small-study-effect adjusted)</h3>"
+                      "<table>"
+                      f"<tr><td>Random-effects estimate</td><td class='num'>{_n(L['re_estimate'])} "
+                      f"({_n(L['re_ci'][0])}, {_n(L['re_ci'][1])})</td></tr>"
+                      f"<tr><td>Limit (adjusted) estimate</td><td class='num'>{_n(L['limit_estimate'])} "
+                      f"({_n(L['limit_ci'][0])}, {_n(L['limit_ci'][1])})</td></tr>"
+                      f"<tr><td>Rucker regression slope</td><td class='num'>{_n(L['slope'],3)} "
+                      f"({'small-study effect present' if L['small_study_effect'] else 'no small-study effect'})</td></tr>"
+                      "</table>"
+                      f"<p style='font-size:12px;color:#64748b'>{L['note']}</p>")
+
+    # --- E-value ---
+    if "evalue" in adv and adv["evalue"].get("available"):
+        E = adv["evalue"]
+        blocks.append("<h3>E-value (robustness to unmeasured confounding)</h3>"
+                      "<table>"
+                      f"<tr><td>E-value (point estimate)</td><td class='num'>{_n(E['evalue_point'],2)}</td></tr>"
+                      f"<tr><td>E-value (CI limit nearest null)</td><td class='num'>{_n(E['evalue_ci'],2)}</td></tr>"
+                      "</table>"
+                      f"<p style='font-size:12px;color:#64748b'>{E['interpretation']} {E['note']}</p>")
+
+    # --- trial sequential analysis ---
+    if "tsa" in adv and adv["tsa"].get("available"):
+        T = adv["tsa"]
+        blocks.append("<h3>Trial sequential analysis</h3>"
+                      "<table>"
+                      f"<tr><td>Cumulative z</td><td class='num'>{_n(T['z_cumulative'],2)}</td></tr>"
+                      f"<tr><td>O'Brien-Fleming boundary z</td><td class='num'>{_n(T['z_boundary'],2)}</td></tr>"
+                      f"<tr><td>Information fraction (accrued / required)</td>"
+                      f"<td class='num'>{_n(T['information_fraction']*100,1)}%</td></tr>"
+                      f"<tr><td>Required information size (heterogeneity-adjusted)</td>"
+                      f"<td class='num'>D&times; diversity = {_n(T['diversity_D'],2)}</td></tr>"
+                      "</table>"
+                      f"<p style='font-size:12px;color:#64748b'><strong>{T['conclusion']}.</strong> "
+                      f"{T['note']}</p>")
+
     # --- influence ---
     if "loo" in adv and adv["loo"]:
         disp = (lambda v: math.exp(v)) if ratio else (lambda v: v)

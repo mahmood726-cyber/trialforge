@@ -28,7 +28,8 @@ if hasattr(sys.stdout, "buffer"):
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from trialforge import (pairwise, proportions, nma, doseresponse, report,  # noqa: E402
-                        advanced, nodesplit, tfreport, copas, dta, cnma)
+                        advanced, nodesplit, tfreport, copas, dta, cnma,
+                        limitma, tsa, evalue)
 
 
 def die(msg):
@@ -101,6 +102,20 @@ def run_advanced(cfg, effects, measure, ratio):
         adv["mh"] = advanced.mantel_haenszel_or(studies)
     if "copas" in want:
         adv["copas"] = copas.analyze(yis, vis, ratio=ratio)
+    if "limitma" in want:
+        adv["limitma"] = limitma.analyze(yis, vis, ratio=ratio)
+    if "tsa" in want:
+        adv["tsa"] = tsa.analyze(yis, vis, delta=cfg.get("tsa_delta"), ratio=ratio)
+    if "evalue" in want:
+        d = cfg.get("studies") and None
+        # need the pooled display estimate + CI; compute a quick RE pool
+        from trialforge import common as _c
+        pool = _c.pool_inverse_variance(yis, vis)
+        import math as _m
+        disp = (lambda v: _m.exp(v)) if ratio else (lambda v: v)
+        adv["evalue"] = evalue.analyze(disp(pool.estimate), disp(pool.ci_low),
+                                       disp(pool.ci_high), measure=measure,
+                                       rare_outcome=cfg.get("rare_outcome", True))
     return adv
 
 

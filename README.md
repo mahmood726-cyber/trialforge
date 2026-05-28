@@ -86,6 +86,9 @@ Add a `"advanced": [...]` list to a `pairwise` config:
 | `trimfill` | Duval–Tweedie trim-and-fill (sensitivity) |
 | `petpeese` | PET-PEESE conditional small-study-effect adjustment |
 | `copas` | Copas selection-model publication-bias sensitivity profile |
+| `limitma` | Rücker limit meta-analysis (small-study-effect adjusted estimate) |
+| `tsa` | trial sequential analysis (RIS + O'Brien-Fleming boundary) |
+| `evalue` | E-value: robustness of the pooled estimate to unmeasured confounding |
 | `loo` | leave-one-out influence table |
 | `baujat` | top heterogeneity contributors |
 | `cumulative` | cumulative meta-analysis by `year` |
