@@ -1,0 +1,12 @@
+{
+  "type": "cnma",
+  "measure": "OR",
+  "title": "Additive component network meta-analysis",
+  "studies": [
+    { "name": "S1", "arms": [ {"components": [], "e": 120, "n": 500}, {"components": ["CBT"], "e": 90, "n": 500} ] },
+    { "name": "S2", "arms": [ {"components": [], "e": 115, "n": 480}, {"components": ["Exercise"], "e": 95, "n": 480} ] },
+    { "name": "S3", "arms": [ {"components": ["CBT"], "e": 88, "n": 460}, {"components": ["CBT", "Exercise"], "e": 70, "n": 460} ] },
+    { "name": "S4", "arms": [ {"components": [], "e": 130, "n": 520}, {"components": ["Medication"], "e": 80, "n": 510} ] },
+    { "name": "S5", "arms": [ {"components": ["Exercise"], "e": 92, "n": 500}, {"components": ["Exercise", "Medication"], "e": 60, "n": 500} ] }
+  ]
+}

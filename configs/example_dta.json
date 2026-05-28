@@ -1,0 +1,14 @@
+{
+  "type": "dta",
+  "title": "Diagnostic test accuracy meta-analysis (bivariate + SROC)",
+  "outcome": "Sensitivity & specificity of the index test",
+  "studies": [
+    { "name": "Study 1", "tp": 80, "fp": 40, "fn": 20, "tn": 160 },
+    { "name": "Study 2", "tp": 95, "fp": 5,  "fn": 5,  "tn": 95 },
+    { "name": "Study 3", "tp": 60, "fp": 30, "fn": 40, "tn": 170 },
+    { "name": "Study 4", "tp": 88, "fp": 12, "fn": 12, "tn": 88 },
+    { "name": "Study 5", "tp": 70, "fp": 50, "fn": 30, "tn": 150 },
+    { "name": "Study 6", "tp": 92, "fp": 8,  "fn": 8,  "tn": 192 },
+    { "name": "Study 7", "tp": 55, "fp": 45, "fn": 45, "tn": 155 }
+  ]
+}

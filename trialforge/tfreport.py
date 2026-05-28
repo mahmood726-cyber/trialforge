@@ -1,7 +1,16 @@
 """trialforge.tfreport — render the 'Advanced diagnostics' HTML section and
-splice it into a metaforge base report."""
+splice it into a metaforge base report; plus standalone DTA and
+component-NMA reports."""
 from __future__ import annotations
 import math
+from . import plots, report as _mf_report
+
+
+import html as _html
+
+
+def _h(s):
+    return "&mdash;" if s is None else _html.escape(str(s))
 
 
 def _n(v, nd=3):
@@ -50,6 +59,21 @@ def advanced_section(adv: dict, *, ratio: bool, source_note: str = "") -> str:
                       "<table><thead><tr><th>Test</th><th class='num'>Result</th>"
                       "<th>Interpretation</th></tr></thead><tbody>"
                       + "\n".join(pb) + "</tbody></table>")
+
+    # --- Copas selection-model sensitivity ---
+    if "copas" in adv and adv["copas"].get("available"):
+        c = adv["copas"]
+        prof = "\n".join(
+            f"<tr><td class='num'>{int(p['p_unpublished']*100)}%</td>"
+            f"<td class='num'>{_n(p['estimate'])} ({_n(p['ci_low'])}, {_n(p['ci_high'])})</td></tr>"
+            for p in c["profile"])
+        blocks.append("<h3>Copas selection-model sensitivity</h3>"
+                      "<table><thead><tr><th class='num'>Assumed unpublished</th>"
+                      "<th class='num'>Adjusted estimate (95% CI)</th></tr></thead>"
+                      f"<tbody>{prof}</tbody></table>"
+                      f"<p style='font-size:12px;color:#64748b'>Unadjusted RE "
+                      f"{_n(c['re_estimate'])}; worst-case (50% unpublished) "
+                      f"{_n(c['worst_case']['estimate'])}. {c['note']}</p>")
 
     # --- influence ---
     if "loo" in adv and adv["loo"]:
@@ -159,3 +183,83 @@ def splice(base_html: str, advanced_html: str) -> str:
     if marker in base_html:
         return base_html.replace(marker, advanced_html + marker, 1)
     return base_html.replace("</main>", advanced_html + "</main>", 1)
+
+
+def _pct(v):
+    if v is None or (isinstance(v, float) and not math.isfinite(v)):
+        return "&mdash;"
+    return f"{v*100:.1f}%"
+
+
+def render_dta(cfg, res):
+    """Standalone diagnostic test accuracy report."""
+    sroc = plots.sroc_svg(res["per_study"],
+                          {"sensitivity": res["sensitivity"], "specificity": res["specificity"]},
+                          res["sroc"])
+    rows = "\n".join(
+        f"<tr><td>{_h(p['name'])}</td><td class='num'>{_pct(p['se'])}</td>"
+        f"<td class='num'>{_pct(p['sp'])}</td></tr>" for p in res["per_study"])
+    te = ("Strong threshold effect detected (Se and FPR strongly correlated) "
+          "&mdash; prefer the SROC curve over a single pooled point."
+          if res["threshold_effect"] else
+          "No strong threshold effect; the pooled operating point is reasonable.")
+    body = f"""
+<section><h2>Result</h2>
+<p class="headline">Pooled sensitivity <strong>{_pct(res['sensitivity'])}</strong>
+(95% CI {_pct(res['sensitivity_ci'][0])} to {_pct(res['sensitivity_ci'][1])}) and
+pooled specificity <strong>{_pct(res['specificity'])}</strong>
+(95% CI {_pct(res['specificity_ci'][0])} to {_pct(res['specificity_ci'][1])})
+across {res['k']} studies. Diagnostic odds ratio {_n(res['dor'],1)}.</p>
+<div class="kpis">
+<div class="kpi"><div class="v">{_pct(res['sensitivity'])}</div><div class="l">Sensitivity</div></div>
+<div class="kpi"><div class="v">{_pct(res['specificity'])}</div><div class="l">Specificity</div></div>
+<div class="kpi"><div class="v">{_n(res['dor'],1)}</div><div class="l">Diagnostic OR</div></div>
+<div class="kpi"><div class="v">{res['k']}</div><div class="l">Studies</div></div>
+</div></section>
+<section><h2>Summary ROC (SROC)</h2><div class="fig">{sroc}</div>
+<p style="font-size:12px;color:#64748b">Red point = pooled operating point; blue line = SROC curve;
+grey points = individual studies.</p></section>
+<section><h2>Per-study estimates</h2>
+<table><thead><tr><th>Study</th><th class="num">Sensitivity</th><th class="num">Specificity</th></tr></thead>
+<tbody>{rows}</tbody></table></section>
+<section><h2>Heterogeneity &amp; threshold</h2>
+<table>
+<tr><td>&tau;&sup2; logit(Se) / logit(FPR)</td><td class="num">{_n(res['tau2_se'],3)} / {_n(res['tau2_fpr'],3)}</td></tr>
+<tr><td>Between-study correlation &rho;</td><td class="num">{_n(res['rho'],3)}</td></tr>
+<tr><td>Threshold correlation (Spearman)</td><td class="num">{_n(res['threshold_corr'],3)}</td></tr>
+</table>
+<p style="font-size:12px;color:#64748b">{te} {res['note']}</p></section>"""
+    return _mf_report._shell(cfg.get("title", "Diagnostic test accuracy"),
+                             "diagnostic accuracy",
+                             _h(cfg.get("outcome", "Sensitivity & specificity")), body)
+
+
+def render_cnma(cfg, res):
+    """Standalone additive component-NMA report."""
+    ratio = res["ratio"]
+    rows = [{"name": c["component"], "est": c["effect"], "lo": c["ci_low"],
+             "hi": c["ci_high"], "weight": None} for c in res["component_effects"]]
+    forest = plots.forest_svg(
+        rows, {"est": 1.0 if ratio else 0.0, "lo": 1.0 if ratio else 0.0,
+               "hi": 1.0 if ratio else 0.0},
+        ratio=ratio, title=f"Component effect ({res['measure']}, 95% CI)",
+        null_label_left="component lowers the outcome",
+        null_label_right="component raises it")
+    crows = "\n".join(
+        f"<tr><td>{_h(c['component'])}</td>"
+        f"<td class='num'>{_n(c['effect'])} ({_n(c['ci_low'])}, {_n(c['ci_high'])})</td></tr>"
+        for c in res["component_effects"])
+    body = f"""
+<section><h2>Component effects</h2>
+<p class="headline">Additive component NMA across {res['n_contrasts']} contrasts
+decomposes the interventions into {len(res['components'])} components. Each
+component's incremental {res['measure']} (vs not having it) is estimated below;
+a combination's effect is the sum of its components (on the {'log ' if ratio else ''}scale).</p>
+<div class="fig">{forest}</div></section>
+<section><h2>Estimated component effects</h2>
+<table><thead><tr><th>Component</th><th class="num">{res['measure']} (95% CI)</th></tr></thead>
+<tbody>{crows}</tbody></table>
+<p style="font-size:12px;color:#64748b">{res['note']}</p></section>"""
+    return _mf_report._shell(cfg.get("title", "Component network meta-analysis"),
+                             "component NMA",
+                             f"{len(res['components'])} components &middot; {res['measure']}", body)

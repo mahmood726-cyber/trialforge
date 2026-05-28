@@ -5,7 +5,7 @@
   "intervention": "Drug X",
   "comparator": "Placebo",
   "outcome": "Major adverse event",
-  "advanced": ["egger", "peters", "trimfill", "petpeese", "loo", "baujat", "cumulative", "subgroup", "metareg", "mh"],
+  "advanced": ["egger", "peters", "trimfill", "petpeese", "copas", "loo", "baujat", "cumulative", "subgroup", "metareg", "mh"],
   "studies": [
     { "name": "Alpha 2014", "year": 2014, "subgroup": "high-risk", "moderator": 2.0, "tE": 110, "tN": 1000, "cE": 140, "cN": 1000 },
     { "name": "Bravo 2016", "year": 2016, "subgroup": "high-risk", "moderator": 2.5, "tE": 95,  "tN": 950,  "cE": 130, "cN": 950 },

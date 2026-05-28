@@ -8,10 +8,16 @@ proportions, network MA, dose-response) **plus**:
   — give it NCT ids or a drug + condition and it extracts the effect
   estimates for you.
 - A full **advanced-diagnostics suite**: publication-bias tests (Egger,
-  Peters, trim-and-fill, PET-PEESE), influence (leave-one-out, Baujat),
-  meta-regression, subgroup with interaction test, cumulative meta-analysis,
-  rare-event estimators (Peto, Mantel-Haenszel), and **NMA inconsistency**
-  via Bucher closed loops.
+  Peters, trim-and-fill, PET-PEESE, **Copas** selection-model sensitivity),
+  influence (leave-one-out, Baujat), meta-regression, subgroup with
+  interaction test, cumulative meta-analysis, rare-event estimators (Peto,
+  Mantel-Haenszel), and **NMA inconsistency** via Bucher closed loops.
+- Three further advanced methods ported from the `allmeta` suite:
+  **diagnostic test accuracy** (`dta` — bivariate Se/Sp pooling + SROC
+  curve), **additive component NMA** (`cnma` — decompose multi-component
+  interventions), and the **Copas** selection model above. The DTA and
+  Copas engines are validated against the allmeta R-parity fixtures
+  (mada::reitsma, metasens::copas).
 
 Same low-token, offline-first design as the sibling kits: the engine is
 pre-built, a CLI only writes a small config, and `run.py` is deterministic
@@ -79,6 +85,7 @@ Add a `"advanced": [...]` list to a `pairwise` config:
 | `peters` | Peters test (better for binary outcomes) |
 | `trimfill` | Duval–Tweedie trim-and-fill (sensitivity) |
 | `petpeese` | PET-PEESE conditional small-study-effect adjustment |
+| `copas` | Copas selection-model publication-bias sensitivity profile |
 | `loo` | leave-one-out influence table |
 | `baujat` | top heterogeneity contributors |
 | `cumulative` | cumulative meta-analysis by `year` |
@@ -88,6 +95,24 @@ Add a `"advanced": [...]` list to a `pairwise` config:
 
 For an `nma` config, add `"advanced":["loops"]` to run Bucher closed-loop
 inconsistency (direct vs indirect evidence).
+
+### Diagnostic test accuracy (`type: "dta"`) and component NMA (`type: "cnma"`)
+
+```json
+{ "type":"dta", "title":"...",
+  "studies":[ {"name":"Study 1","tp":80,"fp":40,"fn":20,"tn":160}, ... ] }
+```
+gives pooled sensitivity/specificity, a diagnostic odds ratio, an SROC
+curve, and a threshold-effect check.
+
+```json
+{ "type":"cnma", "measure":"OR", "title":"...",
+  "studies":[ {"name":"S1","arms":[
+      {"components":[],"e":120,"n":500},
+      {"components":["CBT"],"e":90,"n":500}]}, ... ] }
+```
+estimates each component's incremental effect under the additive model and
+predicts any (even unobserved) combination.
 
 ## Methods
 

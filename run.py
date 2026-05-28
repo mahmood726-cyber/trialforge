@@ -28,7 +28,7 @@ if hasattr(sys.stdout, "buffer"):
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from trialforge import (pairwise, proportions, nma, doseresponse, report,  # noqa: E402
-                        advanced, nodesplit, tfreport)
+                        advanced, nodesplit, tfreport, copas, dta, cnma)
 
 
 def die(msg):
@@ -99,6 +99,8 @@ def run_advanced(cfg, effects, measure, ratio):
         adv["peto"] = advanced.peto_or(studies)
     if "mh" in want:
         adv["mh"] = advanced.mantel_haenszel_or(studies)
+    if "copas" in want:
+        adv["copas"] = copas.analyze(yis, vis, ratio=ratio)
     return adv
 
 
@@ -181,8 +183,23 @@ def main():
         html_doc = report.render_doseresponse(cfg, pool)
         summary = f"{pool.k} studies · {pool.extra['measure']} per unit {pool.extra['slope_display_per_unit']:.3f}"
 
+    elif typ == "dta":
+        res = dta.analyze(cfg["studies"])
+        if not res.get("available"):
+            die(f"DTA failed: {res.get('reason','need 2x2 tables tp/fp/fn/tn')}.")
+        html_doc = tfreport.render_dta(cfg, res)
+        summary = (f"{res['k']} studies · Se {res['sensitivity']*100:.0f}% "
+                   f"Sp {res['specificity']*100:.0f}% · DOR {res['dor']:.1f}")
+
+    elif typ == "cnma":
+        res = cnma.analyze(cfg["studies"], measure=(cfg.get("measure") or "OR").upper())
+        if not res.get("available"):
+            die(f"component-NMA failed: {res.get('reason','')}.")
+        html_doc = tfreport.render_cnma(cfg, res)
+        summary = f"{len(res['components'])} components · {res['n_contrasts']} contrasts"
+
     else:
-        die(f"unknown type '{typ}'. Use pairwise, proportion, nma, doseresponse.")
+        die(f"unknown type '{typ}'. Use pairwise, proportion, nma, doseresponse, dta, cnma.")
 
     out.write_text(html_doc, encoding="utf-8")
     print(f"\nBuilt: {out}")

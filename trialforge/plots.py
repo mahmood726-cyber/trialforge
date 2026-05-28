@@ -4,9 +4,44 @@ forest_svg     pairwise / proportion forest with pooled diamond + PI bar
 network_svg    NMA network geometry (nodes sized by studies, edges by data)
 sucra_svg      NMA SUCRA bar chart
 dose_svg       dose-response curve with CI band
+sroc_svg       diagnostic SROC space (study points + summary point + curve)
 """
 from __future__ import annotations
 import math
+
+
+def sroc_svg(per_study, summary, curve):
+    """ROC space: x = 1-Specificity (FPR), y = Sensitivity. per_study points,
+    a summary operating point, and the SROC curve."""
+    W = H = 420
+    x0, y0, x1, y1 = 60, 30, 390, 360
+    xp = lambda fpr: x0 + fpr * (x1 - x0)
+    yp = lambda se: y1 - se * (y1 - y0)
+    s = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
+         f'font-family="system-ui,sans-serif" font-size="12">',
+         f'<rect width="{W}" height="{H}" fill="#fff"/>']
+    # axes box
+    s.append(f'<rect x="{x0}" y="{y0}" width="{x1-x0}" height="{y1-y0}" fill="none" stroke="#cbd5e1"/>')
+    # diagonal (chance line)
+    s.append(f'<line x1="{xp(0)}" y1="{yp(0)}" x2="{xp(1)}" y2="{yp(1)}" stroke="#e2e8f0" stroke-dasharray="4 3"/>')
+    # SROC curve
+    pts = " ".join(f"{xp(c['fpr']):.1f},{yp(c['sensitivity']):.1f}" for c in curve)
+    s.append(f'<polyline points="{pts}" fill="none" stroke="#2563eb" stroke-width="2"/>')
+    # study points (size ~ implied n not available; fixed)
+    for p in per_study:
+        s.append(f'<circle cx="{xp(p["fpr"]):.1f}" cy="{yp(p["se"]):.1f}" r="4" '
+                 f'fill="#64748b" opacity="0.7"/>')
+    # summary operating point
+    s.append(f'<circle cx="{xp(1-summary["specificity"]):.1f}" cy="{yp(summary["sensitivity"]):.1f}" '
+             f'r="7" fill="#dc2626"/>')
+    # ticks
+    for t in (0, 0.25, 0.5, 0.75, 1.0):
+        s.append(f'<text x="{xp(t):.1f}" y="{y1+16}" text-anchor="middle" fill="#475569">{t:g}</text>')
+        s.append(f'<text x="{x0-8}" y="{yp(t)+4:.1f}" text-anchor="end" fill="#475569">{t:g}</text>')
+    s.append(f'<text x="{(x0+x1)//2}" y="{H-6}" text-anchor="middle" font-weight="600">1 &minus; Specificity (FPR)</text>')
+    s.append(f'<text x="16" y="{(y0+y1)//2}" transform="rotate(-90 16 {(y0+y1)//2})" text-anchor="middle" font-weight="600">Sensitivity</text>')
+    s.append("</svg>")
+    return "\n".join(s)
 
 
 def _esc(s):

@@ -24,6 +24,19 @@ def test_pairwise_advanced(tmp_path):
     assert "Leave-one-out" in h
     assert "Cumulative" in h
     assert "Meta-regression" in h
+    assert "Copas" in h
+
+
+def test_dta(tmp_path):
+    h = _build("example_dta", tmp_path)
+    assert "SROC" in h
+    assert "Sensitivity" in h
+
+
+def test_cnma(tmp_path):
+    h = _build("example_cnma", tmp_path)
+    assert "component" in h.lower()
+    assert "CBT" in h
 
 
 def test_nma_inconsistency(tmp_path):

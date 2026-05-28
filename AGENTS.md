@@ -17,8 +17,14 @@ is a local AACT snapshot), so you can build many analyses without using quota.
 On `[CONFIG ERROR]`, fix only the field named.
 
 ## Base analysis (`type`)
-`pairwise` | `proportion` | `nma` | `doseresponse` — same as metaforge.
-See the per-type field reference in `configs/` examples.
+`pairwise` | `proportion` | `nma` | `doseresponse` (metaforge engine)
+plus three advanced types ported from allmeta:
+  * `dta`  — diagnostic test accuracy; studies are 2x2 tables
+             `{name, tp, fp, fn, tn}`; output = pooled Se/Sp + SROC curve.
+  * `cnma` — additive component NMA; each arm lists `components:[...]`
+             (the reference arm has `components:[]`); output = per-component
+             effects + combination prediction.
+See the per-type field reference in `configs/example_*.json`.
 
 ## Two ways to get the data
 
@@ -48,10 +54,11 @@ or query instead of listing NCTs:
 ## Advanced diagnostics (`advanced: [...]`)
 
 For `pairwise`:
-`egger`, `peters` (binary), `trimfill`, `petpeese`, `loo`, `baujat`,
-`cumulative` (uses each study's `year`), `subgroup` (uses each study's
-`subgroup`), `metareg` (uses each study's numeric `moderator`),
-`peto` / `mh` (binary rare-events).
+`egger`, `peters` (binary), `trimfill`, `petpeese`, `copas`, `loo`,
+`baujat`, `cumulative` (uses each study's `year`), `subgroup` (uses each
+study's `subgroup`), `metareg` (uses each study's numeric `moderator`),
+`peto` / `mh` (binary rare-events). `copas` profiles the pooled estimate
+under increasing assumed publication bias (selection-model sensitivity).
 
 For `nma`:
 `loops` (Bucher closed-loop inconsistency — direct vs indirect).

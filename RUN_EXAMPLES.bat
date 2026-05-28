@@ -4,10 +4,14 @@ REM Needs Python (python.org; tick "Add Python to PATH").
 cd /d "%~dp0"
 python run.py configs/example_pairwise_advanced.json || goto :err
 python run.py configs/example_nma_inconsistency.json || goto :err
+python run.py configs/example_dta.json || goto :err
+python run.py configs/example_cnma.json || goto :err
 echo.
 echo Opening reports...
 start "" "output\example_pairwise_advanced.html"
 start "" "output\example_nma_inconsistency.html"
+start "" "output\example_dta.html"
+start "" "output\example_cnma.html"
 echo.
 echo AACT example (needs a local AACT snapshot; set TRIALFORGE_AACT first):
 echo   python run.py configs\example_aact_finerenone.json
