@@ -25,6 +25,15 @@ Same low-token, offline-first design as the sibling kits: the engine is
 pre-built, a CLI only writes a small config, and `run.py` is deterministic
 with no API calls.
 
+> **Token budget (for agent-driven use).** If you're driving this with a
+> rate-limited assistant (e.g. the free Gemini CLI), the agent emits only the
+> config — ~20 lines, a few hundred tokens. `run.py` then generates the entire
+> ~15 KB report (pooling, 20+ diagnostics, SVG plots, GRADE, and the WebR
+> cross-check) with **zero further model calls**. Asking an assistant to compute
+> the same meta-analysis conversationally costs many times more tokens and can
+> still get the arithmetic wrong — so let the agent *decide what to analyze and
+> review the output*, and let the deterministic engine do the math.
+
 > The four-tool series, increasing power:
 > 1. [meta-starter-kit](https://github.com/mahmood726-cyber/meta-starter-kit) — single-file static pairwise
 > 2. [rapidmeta-kit](https://github.com/mahmood726-cyber/rapidmeta-kit) — full interactive RapidMeta workbench
