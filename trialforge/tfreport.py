@@ -296,6 +296,24 @@ def splice(base_html: str, advanced_html: str) -> str:
     return base_html.replace("</main>", advanced_html + "</main>", 1)
 
 
+def checks_section(issues):
+    """Render a 'Data checks' section from checks.check() issues."""
+    if not issues:
+        return ('<section><h2>Data checks</h2>'
+                '<p style="color:#16a34a;font-size:13px">No data-quality issues '
+                'detected by the automated pre-flight checks.</p></section>')
+    colour = {"error": "#b91c1c", "warning": "#92400e", "info": "#475569"}
+    rows = "\n".join(
+        f"<tr><td style='color:{colour.get(x['level'],'#475569')};font-weight:600'>"
+        f"{x['level'].upper()}</td><td>{_h(x['code'])}</td><td>{_h(x['msg'])}</td></tr>"
+        for x in issues)
+    return ('<section><h2>Data checks</h2>'
+            '<table><thead><tr><th>Level</th><th>Code</th><th>Detail</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table>'
+            '<p style="font-size:12px;color:#64748b">Automated pre-flight checks. '
+            'Errors block the analysis; warnings are advisory.</p></section>')
+
+
 def _pct(v):
     if v is None or (isinstance(v, float) and not math.isfinite(v)):
         return "&mdash;"

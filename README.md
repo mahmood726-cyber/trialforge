@@ -49,6 +49,23 @@ with no API calls.
 3. **Open** the file it prints in `output/` — a full report with forest plot
    *and* an Advanced diagnostics section, working offline.
 
+## Pre-flight data checks
+
+Validate a config and its data before (or instead of) building:
+
+```
+python run.py configs/my_review.json --check
+```
+It reports **errors** (impossible event counts like events > sample size,
+inverted or non-positive confidence intervals, no studies) and **warnings**
+(too few studies for the prediction interval or publication-bias tests,
+duplicate study names, malformed NCT ids). Exit 0 = clean, exit 2 = errors.
+
+A normal build runs the same checks automatically: data **errors block the
+build**; warnings are surfaced in the report's "Data checks" section and on
+the console. This stops the classic failure mode where a typo'd 2×2 table
+silently produces a confident but wrong pooled estimate.
+
 ## The AACT superpower
 
 If you have a local [AACT static copy](https://aact.ctti-clinicaltrials.org/)

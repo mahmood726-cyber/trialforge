@@ -30,7 +30,7 @@ sys.path.insert(0, str(HERE))
 from trialforge import (pairwise, proportions, nma, doseresponse, report,  # noqa: E402
                         advanced, nodesplit, tfreport, copas, dta, cnma,
                         limitma, tsa, evalue, pcurve, gosh, cinema,
-                        glmm, multivariate, survival, grade)
+                        glmm, multivariate, survival, grade, checks)
 
 
 def die(msg):
@@ -147,6 +147,8 @@ def main():
     ap = argparse.ArgumentParser(description="trialforge — AACT-powered advanced meta-analysis.")
     ap.add_argument("config")
     ap.add_argument("--out")
+    ap.add_argument("--check", action="store_true",
+                    help="validate the config + data and report issues without building")
     args = ap.parse_args()
 
     p = Path(args.config)
@@ -160,11 +162,29 @@ def main():
     source_note = ""
     if (cfg.get("source") or "").lower() == "aact":
         rep = load_from_aact(cfg)
-        source_note = (f"Data auto-extracted from {rep.get('source','AACT')} "
-                       f"({rep.get('n_with_effects','?')} of {rep.get('n_ncts_queried','?')} "
-                       f"trials had poolable effects; measure distribution "
-                       f"{rep.get('measure_distribution','')}). "
-                       f"Review every value against the source publication before use.")
+        src = (f"Data auto-extracted from {rep.get('source','AACT')} "
+               f"({rep.get('n_with_effects','?')} of {rep.get('n_ncts_queried','?')} "
+               f"trials had poolable effects; measure distribution "
+               f"{rep.get('measure_distribution','')}").rstrip()
+        skipped = rep.get("malformed_rows_skipped")
+        if skipped:
+            src += f"; {skipped} malformed table row(s) skipped during scan"
+        source_note = src + "). Review every value against the source publication before use."
+
+    # Pre-flight data-quality checks (run on the resolved studies).
+    issues, csum = checks.check(cfg)
+    if args.check or not csum["ok"]:
+        for x in issues:
+            stream = sys.stderr if x["level"] == "error" else sys.stdout
+            print(f"  [{x['level'].upper()}] {x['code']}: {x['msg']}", file=stream)
+        print(f"\n  checks: {csum['errors']} error(s), {csum['warnings']} warning(s), "
+              f"{csum['info']} info.")
+        if args.check:
+            sys.exit(0 if csum["ok"] else 2)
+        if not csum["ok"]:
+            print("\n[BLOCKED] data-quality errors above must be fixed before building.",
+                  file=sys.stderr)
+            sys.exit(2)
 
     typ = (cfg.get("type") or "pairwise").lower()
     out = Path(args.out) if args.out else (HERE / "output" / f"{p.stem}.html")
@@ -269,6 +289,10 @@ def main():
         die(f"unknown type '{typ}'. Use pairwise, proportion, nma, "
             "doseresponse, dta, cnma, multivariate, rmst.")
 
+    # Data-checks section in every report (warnings are advisory; errors
+    # already blocked above).
+    html_doc = tfreport.splice(html_doc, tfreport.checks_section(issues))
+
     # Ensure the AACT "verify against source" caveat is in the rendered HTML
     # for EVERY type (it previously only appeared when an advanced-diagnostics
     # section happened to be present).
@@ -280,6 +304,9 @@ def main():
         html_doc = tfreport.splice(html_doc, aact_section)
 
     out.write_text(html_doc, encoding="utf-8")
+    if csum["warnings"]:
+        print(f"  ({csum['warnings']} data-quality warning(s) — see the report's "
+              "'Data checks' section)")
     print(f"\nBuilt: {out}")
     print(f"  {summary}")
     if source_note:

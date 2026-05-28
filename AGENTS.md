@@ -16,6 +16,15 @@ code — the engine (`trialforge/`) is finished and tested.
 is a local AACT snapshot), so you can build many analyses without using quota.
 On `[CONFIG ERROR]`, fix only the field named.
 
+### Pre-flight data checks
+Run `python run.py configs/<name>.json --check` to validate the config and
+data WITHOUT building — it reports errors (impossible event counts, inverted
+or non-positive CIs, no studies) and warnings (k too small for the
+prediction interval or publication-bias tests, duplicate names, malformed
+NCT ids). Exit 0 = clean, exit 2 = errors. A normal build also runs these
+checks: data ERRORS block the build, warnings appear in the report's
+"Data checks" section. Fix every reported error.
+
 ## Base analysis (`type`)
 `pairwise` | `proportion` | `nma` | `doseresponse` (metaforge engine)
 plus three advanced types ported from allmeta:

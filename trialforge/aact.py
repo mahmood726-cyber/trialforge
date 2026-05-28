@@ -81,18 +81,22 @@ def find_snapshot(root: Optional[str] = None) -> Path:
         f"Looked in: {cands}")
 
 
-def _scan(path: Path, ncol: int, nct_field: int, ncts: set):
+def _scan(path: Path, ncol: int, nct_field: int, ncts: set, stats: dict = None):
     """Yield split rows of a pipe-delimited AACT table where field[nct_field]
     is in `ncts` and the row has the expected column count (guards against
-    rows broken by embedded newlines in text fields)."""
+    rows broken by embedded newlines in text fields). If `stats` is given,
+    counts column-count-mismatched rows that mention an NCT into
+    stats['skipped'] so silent data loss is visible to the caller."""
     with path.open("r", encoding="utf-8", errors="replace") as f:
-        header = f.readline()
+        f.readline()  # header
         for line in f:
             # cheap pre-filter: must contain an NCT id at all
             if "NCT" not in line:
                 continue
             fields = line.rstrip("\n").split("|")
             if len(fields) != ncol:
+                if stats is not None:
+                    stats["skipped"] = stats.get("skipped", 0) + 1
                 continue
             if fields[nct_field] in ncts:
                 yield fields
@@ -186,8 +190,9 @@ class AACT:
         ncol = _ncol(p)
         # header indices
         # id|nct_id|outcome_id|...|param_type(5)|param_value(6)|...|ci_lower(13)|ci_upper(14)
+        scan_stats = {"skipped": 0}
         rows_by_nct = {}
-        for fields in _scan(p, ncol, 1, ncts):
+        for fields in _scan(p, ncol, 1, ncts, stats=scan_stats):
             nct = fields[1]
             outcome_id = fields[2]
             param_type = fields[5]
@@ -255,6 +260,7 @@ class AACT:
                 "n_ncts_queried": len(ncts),
                 "n_with_effects": len(studies),
                 "measure_distribution": dict(measure_counter),
+                "malformed_rows_skipped": scan_stats["skipped"],
                 "source": "AACT outcome_analyses",
                 "snapshot": str(self.dir),
             },
