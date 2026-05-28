@@ -89,6 +89,8 @@ Add a `"advanced": [...]` list to a `pairwise` config:
 | `limitma` | Rücker limit meta-analysis (small-study-effect adjusted estimate) |
 | `tsa` | trial sequential analysis (RIS + O'Brien-Fleming boundary) |
 | `evalue` | E-value: robustness of the pooled estimate to unmeasured confounding |
+| `gosh` | GOSH subset-heterogeneity diagnostic (median/IQR across all subsets) |
+| `pcurve` | p-curve evidential-value test (needs a `p_value` per study) |
 | `loo` | leave-one-out influence table |
 | `baujat` | top heterogeneity contributors |
 | `cumulative` | cumulative meta-analysis by `year` |
@@ -96,8 +98,9 @@ Add a `"advanced": [...]` list to a `pairwise` config:
 | `metareg` | meta-regression on a numeric `moderator` |
 | `peto` / `mh` | rare-event Peto / Mantel-Haenszel OR |
 
-For an `nma` config, add `"advanced":["loops"]` to run Bucher closed-loop
-inconsistency (direct vs indirect evidence).
+For an `nma` config, add `"advanced":["loops","cinema"]` to run Bucher
+closed-loop inconsistency (direct vs indirect evidence) and a CINeMA-style
+confidence-in-the-evidence rating per comparison.
 
 ### Diagnostic test accuracy (`type: "dta"`) and component NMA (`type: "cnma"`)
 

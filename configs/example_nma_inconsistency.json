@@ -3,9 +3,9 @@
   "measure": "OR",
   "reference": "Placebo",
   "smaller_better": true,
-  "title": "Network meta-analysis with Bucher inconsistency check",
+  "title": "Network meta-analysis with Bucher inconsistency + CINeMA",
   "outcome": "Event (lower is better)",
-  "advanced": ["loops"],
+  "advanced": ["loops", "cinema"],
   "studies": [
     { "name": "S1", "arms": [ {"t": "Placebo", "e": 120, "n": 500}, {"t": "DrugA", "e": 90, "n": 500} ] },
     { "name": "S2", "arms": [ {"t": "Placebo", "e": 110, "n": 480}, {"t": "DrugB", "e": 70, "n": 470} ] },

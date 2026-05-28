@@ -29,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from trialforge import (pairwise, proportions, nma, doseresponse, report,  # noqa: E402
                         advanced, nodesplit, tfreport, copas, dta, cnma,
-                        limitma, tsa, evalue)
+                        limitma, tsa, evalue, pcurve, gosh, cinema)
 
 
 def die(msg):
@@ -116,6 +116,12 @@ def run_advanced(cfg, effects, measure, ratio):
         adv["evalue"] = evalue.analyze(disp(pool.estimate), disp(pool.ci_low),
                                        disp(pool.ci_high), measure=measure,
                                        rare_outcome=cfg.get("rare_outcome", True))
+    if "gosh" in want:
+        adv["gosh"] = gosh.analyze(yis, vis, ratio=ratio)
+    if "pcurve" in want:
+        pv = [s.get("p_value") for s in cfg["studies"]]
+        if all(p is not None for p in pv):
+            adv["pcurve"] = pcurve.analyze(pv)
     return adv
 
 
@@ -179,9 +185,14 @@ def main():
             die("NMA failed (need >=2 connected treatments).")
         base = report.render_nma(cfg, res)
         adv = {}
-        if "loops" in set(cfg.get("advanced", [])):
+        want_nma = set(cfg.get("advanced", []))
+        if "loops" in want_nma:
             adv["loops"] = nodesplit.loop_inconsistency(
                 cfg["studies"], (cfg.get("measure") or "OR").upper())
+        if "cinema" in want_nma:
+            adv["cinema"] = cinema.rate(
+                res, loops=adv.get("loops"), ratio=res["ratio"],
+                judgments=cfg.get("cinema_judgments"))
         adv_html = tfreport.advanced_section(adv, ratio=res["ratio"], source_note=source_note)
         html_doc = tfreport.splice(base, adv_html)
         best = res["ranking"][0]

@@ -207,6 +207,52 @@ def advanced_section(adv: dict, *, ratio: bool, source_note: str = "") -> str:
                           f"<p style='font-size:12px;color:#64748b'>{li['n_loops']} closed loop(s); "
                           f"{'at least one shows inconsistency' if li['any_inconsistent'] else 'no significant inconsistency detected'}.</p>")
 
+    # --- GOSH subset diagnostic ---
+    if "gosh" in adv and adv["gosh"].get("available"):
+        g = adv["gosh"]
+        blocks.append("<h3>GOSH (subset-heterogeneity diagnostic)</h3>"
+                      "<table>"
+                      f"<tr><td>Subsets pooled</td><td class='num'>{g['n_subsets']}"
+                      f"{' (sampled)' if g['sampled'] else ''}</td></tr>"
+                      f"<tr><td>Full-sample estimate</td><td class='num'>{_n(g['full_estimate'])} "
+                      f"(I&sup2; {_n(g['full_i2'],1)}%)</td></tr>"
+                      f"<tr><td>Subset estimates (median, IQR)</td><td class='num'>{_n(g['median_estimate'])} "
+                      f"[{_n(g['q25_estimate'])}, {_n(g['q75_estimate'])}]</td></tr>"
+                      f"<tr><td>Subset estimate range</td><td class='num'>{_n(g['min_estimate'])} to {_n(g['max_estimate'])}</td></tr>"
+                      f"<tr><td>Median / max subset I&sup2;</td><td class='num'>{_n(g['median_i2'],1)}% / {_n(g['max_i2'],1)}%</td></tr>"
+                      "</table>"
+                      f"<p style='font-size:12px;color:#64748b'>{g['note']}</p>")
+
+    # --- p-curve ---
+    if "pcurve" in adv and adv["pcurve"].get("available"):
+        pc = adv["pcurve"]
+        blocks.append("<h3>p-curve (evidential value)</h3>"
+                      "<table>"
+                      f"<tr><td>Significant studies used</td><td class='num'>{pc['n_significant']}</td></tr>"
+                      f"<tr><td>Fisher's test (right-skew)</td><td class='num'>&chi;&sup2;={_n(pc['fisher_chisq'],2)} "
+                      f"(df {pc['fisher_df']}), p={_p(pc['fisher_p'])}</td></tr>"
+                      f"<tr><td>Flatness test</td><td class='num'>{int(pc['prop_low']*100)}% of pp&le;0.5, "
+                      f"z={_n(pc['z_flat'],2)}, p={_p(pc['p_flat'])}</td></tr>"
+                      "</table>"
+                      f"<p style='font-size:12px;color:#64748b'>{pc['interpretation']}. {pc['note']}</p>")
+
+    # --- CINeMA confidence ---
+    if "cinema" in adv and adv["cinema"].get("available"):
+        cm = adv["cinema"]
+        rows = "\n".join(
+            f"<tr><td>{_h(c['comparison'])}</td>"
+            f"<td class='num'>{_n(c['estimate'])} ({_n(c['ci_low'])}, {_n(c['ci_high'])})</td>"
+            f"<td>{c['domains']['imprecision']}</td>"
+            f"<td>{c['domains']['heterogeneity']}</td>"
+            f"<td>{c['domains']['incoherence']}</td>"
+            f"<td><strong>{c['confidence']}</strong></td></tr>" for c in cm["comparisons"])
+        blocks.append("<h3>Confidence in NMA (CINeMA-style)</h3>"
+                      "<table><thead><tr><th>Comparison</th><th class='num'>Effect (95% CI)</th>"
+                      "<th>Imprecision</th><th>Heterogeneity</th><th>Incoherence</th>"
+                      "<th>Confidence</th></tr></thead>"
+                      f"<tbody>{rows}</tbody></table>"
+                      f"<p style='font-size:12px;color:#64748b'>{cm['note']}</p>")
+
     if not blocks:
         return ""
     sn = f"<p style='font-size:12px;color:#64748b'>{source_note}</p>" if source_note else ""

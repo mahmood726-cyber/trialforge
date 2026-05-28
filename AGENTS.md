@@ -62,10 +62,13 @@ under increasing assumed publication bias (selection-model sensitivity).
 Also: `limitma` (Rucker limit meta-analysis small-study adjustment),
 `tsa` (trial sequential analysis; optional `tsa_delta` = effect to power
 for), `evalue` (E-value for unmeasured confounding; set
-`rare_outcome:false` for common outcomes).
+`rare_outcome:false` for common outcomes), `gosh` (subset-heterogeneity
+diagnostic), `pcurve` (evidential value — needs a `p_value` on each study).
 
 For `nma`:
-`loops` (Bucher closed-loop inconsistency — direct vs indirect).
+`loops` (Bucher closed-loop inconsistency — direct vs indirect) and
+`cinema` (CINeMA-style confidence rating; optional `cinema_judgments` =
+per-comparison within_study/reporting/indirectness concern levels).
 
 Add only the diagnostics that fit the data: `peters`/`peto`/`mh` need
 binary `tE/tN/cE/cN`; `cumulative` needs `year`; `subgroup` needs
