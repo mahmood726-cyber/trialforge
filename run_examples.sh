@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the example analyses and open them (Mac/Linux). Needs Python 3.
 cd "$(dirname "$0")" || exit 1
-EXAMPLES="pairwise_advanced nma_inconsistency dta cnma rareevents multivariate rmst"
+EXAMPLES="pairwise_advanced sglt2_hf nma_inconsistency dta cnma rareevents multivariate rmst"
 for c in $EXAMPLES; do
   python3 run.py "configs/example_${c}.json" || { echo "Is Python 3 installed?"; exit 1; }
 done

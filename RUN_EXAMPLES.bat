@@ -2,12 +2,12 @@
 REM Double-click (Windows) to build the example analyses and open them.
 REM Needs Python (python.org; tick "Add Python to PATH").
 cd /d "%~dp0"
-for %%C in (pairwise_advanced nma_inconsistency dta cnma rareevents multivariate rmst) do (
+for %%C in (pairwise_advanced sglt2_hf nma_inconsistency dta cnma rareevents multivariate rmst) do (
   python run.py configs/example_%%C.json || goto :err
 )
 echo.
 echo Opening reports...
-for %%C in (pairwise_advanced nma_inconsistency dta cnma rareevents multivariate rmst) do (
+for %%C in (pairwise_advanced sglt2_hf nma_inconsistency dta cnma rareevents multivariate rmst) do (
   start "" "output\example_%%C.html"
 )
 echo.

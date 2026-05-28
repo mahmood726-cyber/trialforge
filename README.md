@@ -141,6 +141,17 @@ curve, and a threshold-effect check.
 estimates each component's incremental effect under the additive model and
 predicts any (even unobserved) combination.
 
+## Worked real-world example (cross-validated)
+
+`configs/example_sglt2_hf.json` reproduces the 5-trial **SGLT2 inhibitors
+in heart failure** meta-analysis (DAPA-HF, EMPEROR-Reduced,
+EMPEROR-Preserved, DELIVER, SOLOIST-WHF) from the E156 flagship living
+capsule. trialforge pools the published hazard ratios to **HR 0.77** with
+the same Paule-Mandel + Knapp-Hartung methodology, and
+`tests/test_sglt2_flagship.py` asserts trialforge's pooled HR / I² / τ²
+match the capsule's own engine to 1e-4 / machine precision — a real
+cross-engine validation, not just a synthetic fixture.
+
 ## Methods
 
 All pooling uses the metaforge core (random effects, Paule–Mandel τ²,

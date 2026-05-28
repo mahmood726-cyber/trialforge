@@ -1,0 +1,18 @@
+{
+  "type": "pairwise",
+  "measure": "HR",
+  "title": "SGLT2 inhibitors in heart failure (E156 flagship capsule dataset)",
+  "intervention": "SGLT2 inhibitor",
+  "comparator": "Placebo",
+  "outcome": "Composite CV death or HF hospitalisation",
+  "baseline_risk": 0.21,
+  "tau2_method": "PM",
+  "advanced": ["loo", "cumulative", "egger", "grade"],
+  "studies": [
+    { "name": "DAPA-HF",          "nct": "NCT03036124", "year": 2019, "effect": 0.74, "ci_low": 0.65, "ci_high": 0.85 },
+    { "name": "EMPEROR-Reduced",  "nct": "NCT03057977", "year": 2020, "effect": 0.75, "ci_low": 0.65, "ci_high": 0.86 },
+    { "name": "EMPEROR-Preserved","nct": "NCT03057951", "year": 2021, "effect": 0.79, "ci_low": 0.69, "ci_high": 0.90 },
+    { "name": "DELIVER",          "nct": "NCT03619213", "year": 2022, "effect": 0.82, "ci_low": 0.73, "ci_high": 0.92 },
+    { "name": "SOLOIST-WHF",      "nct": "NCT03521934", "year": 2021, "effect": 0.67, "ci_low": 0.52, "ci_high": 0.85 }
+  ]
+}
